@@ -22,15 +22,15 @@
 
 ## <a name= model>Model Structure</a>
 ### <a name= org>Original Model</a>
-![Original model](orginalmodel.PNG)
+![Original model](Readme_images/orginalmodel.PNG)
 ### <a name= gazanet>GazaNet Model</a>
-![GazaNet model (Our model)](gazanet.PNG)
+![GazaNet model (Our model)](Readme_images/gazanet.PNG)
 
 ---
 
 ## <a name= FolderStructure>Folder Structure</a>
 ```
-📦StereoNet-Last-DFKI
+📦StereoNet-Last-DFKI-V2
  ┣ 📂dataloader
  ┃ ┣ 📜KITTILoader.py --> myImageFolder for KITTI 2015
  ┃ ┣ 📜KITTILoader1.py --> myImageFolder for KITTI 2012
@@ -39,45 +39,45 @@
  ┃ ┣ 📜listflowfile.py --> Dataloader for FT3D path
  ┃ ┣ 📜preprocess.py
  ┃ ┣ 📜readpfm.py
- ┃ ┣ 📜SecenFlowLoader1.py
  ┃ ┣ 📜SecenFlowLoaderMy.py --> myImageFolder for FT3D
+ ┃ ┗ 📜__init__.py
  ┣ 📂models
  ┃ ┣ 📜factorizer.py --> prepare factorizing of conv3d parameters
- ┃ ┣ 📜spatioTemporalConv.py
+ ┃ ┣ 📜memory.py
+ ┃ ┣ 📜plot.py
  ┃ ┣ 📜spatioTemporalConv_General.py --> Actual implementation of factorizing cost filtering layer
  ┃ ┣ 📜StereoNet_Multi.py --> for Original StereoNet model
  ┃ ┣ 📜StereoNet_Multi_FactorizedConv3D.py --> for Our model (GazaNet)
- ┃ ┣ 📜StereoNet_Multi_FactorizedConv3D_temp.py
- ┃ ┣ 📜StereoNet_Multi_SepConv.py
- ┃ ┗ 📜StereoNet_single.py
+ ┃ ┗ 📜StereoNet_Multi_SepConv.py
  ┣ 📂pretrainedModels --> contains pretrained models on FT3d
- ┃ ┣ 📜 cf_fact3d_fin_sceneflow-2015-2021_01_24-18_06_08-epoch-100-loss3-0.515-lossesSum-3.316.pth --> pretrained model for GazaNet model on FT3D
- ┃ ┗ 📜 org_fin_sceneflow-2015-2021_01_24-14_48_42-epoch-68-loss3-0.333-lossesSum-2.302.pth --> pretrained model for original model on FT3D
- ┣ 📂results_V18 --> contains results of running the code
- ┃ ┣ 📜cf_fact3d_fin_kitti-2012-2021_01_30-17_15_18-epoch-3200-loss3-0.148-lossesSum-0.74.pth --> checkpoint after finetuning on KITTI 2012
- ┃ ┣ 📜cf_fact3d_fin_kitti-2015-2021_01_31-02_59_50-epoch-2800-loss3-0.115-lossesSum-0.616.pth --> checkpoint after finetuning on KITTI 2015
- ┃ ┣ 📜cf_fact3d_fin_sceneflow-2015-2021_01_24-18_06_08-epoch-100-loss3-0.515-lossesSum-3.316.pth --> checkpoint after training on FT3d using GazaNet model
- ┃ ┗ 📜org_fin_sceneflow-2015-2021_01_24-14_48_42-epoch-68-loss3-0.333-lossesSum-2.302.pth --> checkpoint after training on FT3d using original model
+ ┣ 📂Readme_images
+ ┃ ┣ 📜gazanet.PNG
+ ┃ ┗ 📜orginalmodel.PNG
+ ┣ 📂results --> contains results of running the code
  ┣ 📂utils
- ┃ ┣ 📜disp_to_color.py --> convert disparity image to colored image
+ ┃ ┣ 📜disp_to_color.py --> convert disparity image to colored image, save images
  ┃ ┣ 📜FinalQuant.py --> for quantizing the weights
+ ┃ ┣ 📜folder_logs_init.py --> for creating the required result folders, initialzing logs 
  ┃ ┣ 📜logger.py
- ┃ ┣ 📜preprocess.py
+ ┃ ┣ 📜merge_freeze_model.py --> for merging and freezing a model
  ┃ ┣ 📜readpfm.py
- ┃ ┣ 📜utils.py --> contains the loss functions
+ ┃ ┣ 📜save_load.py --> load dataset, load and save checkpoint, load qauntized model, save losses functions
+ ┃ ┣ 📜stop_early.py --> for stop_early 
+ ┃ ┣ 📜test.py --> main test function
+ ┃ ┣ 📜train.py --> main train, adjust_learning_rate, and test_from_training functions
+ ┃ ┣ 📜utils.py --> contains the loss, outliers functions
  ┃ ┗ 📜__init__.py
  ┣ 📜args_file.py --> This file contains the arguments or parameters that required to run the code
- ┣ 📜finetune_2012_V18.sh --> script to finetune the pretrained model on KITTI 2012
- ┣ 📜finetune_2015_V18.sh --> script to finetune the pretrained model on KITTI 2015
+ ┣ 📜finetune_2012.sh --> script to finetune the pretrained model on KITTI 2012
+ ┣ 📜finetune_2015.sh --> script to finetune the pretrained model on KITTI 2015
  ┣ 📜main_file.py --> main file code which called from args_file.py
  ┣ 📜README.md
- ┣ 📜resume_V18.sh --> script to resume training
- ┣ 📜run_V18.sh --> script to train the model on FT3d from scratch
- ┣ 📜test_kitti_2012_V18.sh --> script to test the model on KITTI 2012
- ┣ 📜test_kitti_2015_V18.sh --> script to test the model on KITTI 2015
- ┣ 📜test_kitti_V18.sh --> script to test the model on KITTI
- ┗ 📜test_V18.sh --> script to test the model on FT3d
- ```
+ ┣ 📜resume.sh --> script to resume training
+ ┣ 📜run.sh --> script to train the model on FT3d from scratch
+ ┣ 📜test.sh --> script to test the model on FT3d
+ ┣ 📜test_kitti_2012.sh --> script to test the model on KITTI 2012
+ ┗ 📜test_kitti_2015.sh --> script to test the model on KITTI 2015
+```
 
 ---
 
@@ -146,6 +146,8 @@
     - ###Selecting the dataset
         - dataset: --> {sceneflow, kitti} To select the dataset
         - datapath: {/home/alghoul/myenv/FlyingThings3D,/home/alghoul/myenv/kitti2015/training,/home/alghoul/myenv/kitti2012/training} To select the root path of the datset. Note: This paremeters should match the the value of the "dataset" parameter
+        - datatype: {2012, 2015} to select kitti version 2012 or 2015
+        - flip_vertical: {0,1} This for KITII dataset to enable flipping the image up-down for 1 or no flipping
     - stages: --> {1,2,3,4} Number of stages
     - model: --> {org, cf_fact3d, cf_sepconv}  to select the model to run it. org: original model, cf_fact3d: GazaNet model (ourmodel), cf_sepconv: eperable conolution model (not used)
     - mode: {train,finetune,test} To select mode of running
@@ -169,16 +171,19 @@
         - resume: {0,1} --> 0: no resuming, 1: enable resuming
         - resumeFile: {None, /kitti_model_cf_fact3d_3stages/checkpoints/- cf_fact3d_fin_kitti-2015-2020_12_19-16_03_29-epoch-2-loss2-10.031-lossesSum-31.297.pth} --> The path of the resume file if enable resume
     - ####for GazaNet model=cf_fact3d (our model)
-        - nosubspace:{1,2,...} --> number of conv2d layers used in factorizing
+        - model_bn:{0,1} --> for enabling Batch Normalized (BN) layers in whole the model or not. 1: enable BN according to the BN_1D_last or (BN_1D and BN_2D) values. 0: disable BN regardless of BN_1D_last,BN_1D and BN_2D values.
+        -BN_1D_last: {0,1} --> enforcing BN for the last conv1D in factorized conv3d layers regardless of BN_1D and BN_2D values. 0: use BN_1D and BN_2D values for BN
         - BN_1D: {0,1} --> 0: don't use batch normalized with Conv1D layer in factorizing, 1: use batch normalized with Conv1D layer in factorizing
         - BN_2D: {0,1} --> 0: don't use batch normalized with Conv2D layer in factorizing, 1: use batch normalized with Conv2D layer in factorizing
-
+        - fact_kernels: Kernel values for each conv1d or conv2d layers for the factorizing conv3d layers. you can use multiple kernels. space required between every kerenl, No spaces or comma required between the values of the same kernal. For example to use four kernels, we write them as 331 131 113 311
+        - filter1_kernels: The same as above fact_kernels argument, but it used for the layers in the first cost filtering block. This option is enabled if the is_filter1_differ argument is equal 1.
+        - is_filter1_differ: {0, 1} --> To use different kernel sizes and conv layers in the first component of the cost filtering layer. 1: use the kernels in filter1_kernels argument for the first filtering block. 0: dont use different kernels for the first filtering block.
 ---
 
 ## <a name= run>How to run the code</a>
 
 ### <a name= train>Training the model</a>
-- To train the model from scratch using FT3D run "run_V17.sh" script
+- To train the model from scratch using FT3D run "run.sh" script
 - Note: refer to the [Main parameters to run the code](#args) for more help
 ---
 
@@ -190,12 +195,12 @@
 ---
 
 ### <a name= resume>Resuming the model</a>
-- To resume the model you can run "resume_V18.sh" script
+- To resume the model you can run "resume.sh" script
 
 ---
 
 ### <a name= test>Testing the model</a>
 - To test the model you can run the following script:
     - test_V18.sh --> test the model on FT3D dataset
-    - test_kitti_2015_V18.sh --> test the model on KITTI 2015 dataset
-    - test_kitti_2012_V18.sh --> test the model on KITTI 2012 dataset
+    - test_kitti_2015.sh --> test the model on KITTI 2015 dataset
+    - test_kitti_2012.sh --> test the model on KITTI 2012 dataset
