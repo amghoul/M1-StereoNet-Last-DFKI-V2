@@ -35,7 +35,7 @@ class myImageFloder(data.Dataset):
         self.disp_L_noc = left_disp_noc
         self.mask_obj_map = mask_obj_map
         self.flip_vertical=flip_vertical
-        self.flip_ver = transforms.RandomVerticalFlip()
+        #self.flip_ver = transforms.RandomVerticalFlip()
 
     def __getitem__(self, index):
         left  = self.left[index]
@@ -74,12 +74,16 @@ class myImageFloder(data.Dataset):
             right_img  = processed(right_img)
 
             #FLIP_VERTICALLY:
-            if self.flip_vertical == 1:
-                left_img = self.flip_ver(left_img)
-                right_img = self.flip_ver(right_img)
-                dataL = np.flipud(dataL).copy()
-                dataL_noc = np.flipud(dataL_noc).copy()
-                mask_obj_map_img = np.flipud(mask_obj_map_img).copy()
+            probability = np.random.random()
+            if self.flip_vertical == 1 and probability > 0.5:
+                left_img = left_img.flip(-2)
+                right_img = right_img.flip(-2)
+                dataL = np.flip(dataL, -2)
+                #dataL = np.flipud(dataL).copy()
+                dataL_noc = np.flip(dataL_noc, -2)
+                #dataL_noc = np.flipud(dataL_noc).copy()
+                mask_obj_map_img = np.flip(mask_obj_map_img, -2)
+                #mask_obj_map_img = np.flipud(mask_obj_map_img).copy()
 
             return left_img, right_img, dataL,dataL_noc,mask_obj_map_img,left_path,right_path
 
@@ -102,12 +106,13 @@ class myImageFloder(data.Dataset):
             right_img      = processed(right_img)
 
             #FLIP_VERTICALLY:
-            if self.flip_vertical == 1:
-                left_img = self.flip_ver(left_img)
-                right_img = self.flip_ver(right_img)
-                dataL = np.flipud(dataL).copy()
-                dataL_noc = np.flipud(dataL_noc).copy()
-                mask_obj_map_img = np.flipud(mask_obj_map_img).copy()
+            probability = np.random.random()
+            if self.flip_vertical == 1 and probability > 0.5:
+                left_img = left_img.flip(-2)
+                right_img = right_img.flip(-2)
+                dataL = np.flip(dataL, -2)
+                dataL_noc = np.flip(dataL_noc, -2)
+                mask_obj_map_img = np.flip(mask_obj_map_img, -2)
 
             return left_img, right_img, dataL,dataL_noc, mask_obj_map_img,left_path,right_path
 

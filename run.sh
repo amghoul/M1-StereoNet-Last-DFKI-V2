@@ -3,9 +3,9 @@ stages=4
 dataset=sceneflow # kitti   sceneflow
 model=cf_fact3d # org cf_sepconv  cf_fact3d
 mode=train # train   finetune    test
-datapath=/home/alghoul/myenv/FlyingThings3D # /home/alghoul/myenv/FlyingThings3D    /home/alghoul/myenv/kitti2015/training  /home/alghoul/myenv/kitti2012/training
+datapath=/netscratch/alkoutayni/StereoMatching/Datasets/FlyingThings3D # /netscratch/alkoutayni/StereoMatching/Datasets/FlyingThings3D    /netscratch/alkoutayni/StereoMatching/Datasets/kitti2015/training  /netscratch/alkoutayni/StereoMatching/Datasets/kitti2012/training
 datatype=2015
-flip_vertical=0
+flip_vertical=1
 epochs=100
 lr=0.001
 train_bsize=4 #10
@@ -31,9 +31,9 @@ BN_1D_last=1
 BN_1D=1
 BN_2D=0
 is_filter1_differ=0
-filter1_kernels=311 311
-fact_kernels=331 311 311
-CUDA_VISIBLE_DEVICES=0 python  args_file.py --stages $stages --dataset $dataset --model $model --mode $mode --datapath $datapath \
+filter1_kernels="311 311"
+fact_kernels="331 311 311"
+CUDA_VISIBLE_DEVICES=0 python3  args_file.py --stages $stages --dataset $dataset --model $model --mode $mode --datapath $datapath \
                                             --datatype $datatype --flip_vertical $flip_vertical --epochs $epochs --lr $lr --train_bsize $train_bsize \
                                             --test_bsize $test_bsize --save_path $save_path --print_freq $print_freq \
                                             --checkpoint_save_thr $checkpoint_save_thr --abs_thr $abs_thr --loadmodel $loadmodel \

@@ -34,7 +34,7 @@ class myImageFloder(data.Dataset):
         self.training = training
         self.disp_L_noc = left_disp_noc
         self.flip_vertical=flip_vertical
-        self.flip_ver = transforms.RandomVerticalFlip()
+        #self.flip_ver = transforms.RandomVerticalFlip()
 
     def __getitem__(self, index):
         left  = self.left[index]
@@ -68,11 +68,12 @@ class myImageFloder(data.Dataset):
             right_img  = processed(right_img)
 
             #FLIP_VERTICALLY:
-            if self.flip_vertical == 1:
-                left_img = self.flip_ver(left_img)
-                right_img = self.flip_ver(right_img)
-                dataL = np.flipud(dataL).copy()
-                dataL_noc = np.flipud(dataL_noc).copy()
+            probability = np.random.random()
+            if self.flip_vertical == 1 and probability > 0.5:
+                left_img = left_img.flip(-2)
+                right_img = right_img.flip(-2)
+                dataL = np.flip(dataL, -2)
+                dataL_noc = np.flip(dataL_noc, -2)
 
             temp_tensor = torch.empty(1, 1)
             return left_img, right_img, dataL,dataL_noc,temp_tensor,left_path,right_path
@@ -93,11 +94,12 @@ class myImageFloder(data.Dataset):
             right_img      = processed(right_img)
 
             #FLIP_VERTICALLY:
-            if self.flip_vertical == 1:
-                left_img = self.flip_ver(left_img)
-                right_img = self.flip_ver(right_img)
-                dataL = np.flipud(dataL).copy()
-                dataL_noc = np.flipud(dataL_noc).copy()
+            probability = np.random.random()
+            if self.flip_vertical == 1 and probability > 0.5:
+                left_img = left_img.flip(-2)
+                right_img = right_img.flip(-2)
+                dataL = np.flip(dataL, -2)
+                dataL_noc = np.flip(dataL_noc, -2)
 
             temp_tensor = torch.empty(1, 1)
             return left_img, right_img, dataL,dataL_noc,temp_tensor , left_path,right_path

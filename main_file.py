@@ -31,7 +31,7 @@ def select_model_mode(args,log,root_path):
             model = StereoNetSepConv(k=3, r=args.stages-1, maxdisp=args.maxdisp) ### with separable conv
         elif args.model == 'cf_fact3d':
             log.info("-- model using stereonet with Factorized Conv3D for Cost Filtering Layer for training--")
-            model = StereoNetFactorized(k=3, r=args.stages-1,is_filter1_differ=args.is_filter1_differ,filter1_kernels=args.filter1_kernels,fact_kernels=args.filter1_kernels,BN_1D = args.BN_1D, BN_2D = args.BN_2D,BN_1D_last=args.BN_1D_last, model_bn=args.model_bn, maxdisp=args.maxdisp) ### with factorized conv3d
+            model = StereoNetFactorized(k=3, r=args.stages-1,is_filter1_differ=args.is_filter1_differ,filter1_kernels=args.filter1_kernels,fact_kernels=args.fact_kernels,BN_1D = args.BN_1D, BN_2D = args.BN_2D,BN_1D_last=args.BN_1D_last, model_bn=args.model_bn, maxdisp=args.maxdisp) ### with factorized conv3d
         else: # org model
             log.info("-- model using Original StereoNet for training--")
         
@@ -71,7 +71,7 @@ def select_model_mode(args,log,root_path):
                 #model =freezingtheModel(args,model,log)
             elif args.model == 'cf_fact3d':
                 log.info("-- model using stereonet with factorized conv3d in the cost vlume filtering for finetuning--")
-                model = StereoNetFactorized(k=3, r=args.stages-1,is_filter1_differ=args.is_filter1_differ,filter1_kernels=args.filter1_kernels,fact_kernels=args.filter1_kernels,BN_1D = args.BN_1D, BN_2D = args.BN_2D,BN_1D_last=args.BN_1D_last, model_bn=args.model_bn, maxdisp=args.maxdisp) ### with factorized conv3d
+                model = StereoNetFactorized(k=3, r=args.stages-1,is_filter1_differ=args.is_filter1_differ,filter1_kernels=args.filter1_kernels,fact_kernels=args.fact_kernels,BN_1D = args.BN_1D, BN_2D = args.BN_2D,BN_1D_last=args.BN_1D_last, model_bn=args.model_bn, maxdisp=args.maxdisp) ### with factorized conv3d
                 if args.cuda:
                     model = nn.DataParallel(model)
                     model.cuda()
@@ -100,7 +100,7 @@ def select_model_mode(args,log,root_path):
             model = StereoNetSepConv(k=3, r=args.stages-1, maxdisp=args.maxdisp) ### with separable conv
         elif args.model == 'cf_fact3d':
             log.info("-- model using stereonet with Factorized Conv3D for Cost Filtering Layer for testing--")
-            model = StereoNetFactorized(k=3, r=args.stages-1,is_filter1_differ=args.is_filter1_differ,filter1_kernels=args.filter1_kernels,fact_kernels=args.filter1_kernels,BN_1D = args.BN_1D, BN_2D = args.BN_2D,BN_1D_last=args.BN_1D_last, model_bn=args.model_bn, maxdisp=args.maxdisp) ### with factorized conv3d
+            model = StereoNetFactorized(k=3, r=args.stages-1,is_filter1_differ=args.is_filter1_differ,filter1_kernels=args.filter1_kernels,fact_kernels=args.fact_kernels,BN_1D = args.BN_1D, BN_2D = args.BN_2D,BN_1D_last=args.BN_1D_last, model_bn=args.model_bn, maxdisp=args.maxdisp) ### with factorized conv3d
         else: # org model
             log.info("-- model using Original StereoNet for testing--")
         if args.cuda:
@@ -118,6 +118,10 @@ def main(args):
     #torch.manual_seed(args.seed)
     if args.cuda:
         torch.cuda.manual_seed(args.seed)
+    for i in range(len(args.fact_kernels)):
+        args.fact_kernels[i]=list(map(int, args.fact_kernels[i]))
+    for i in range(len(args.filter1_kernels)):
+        args.filter1_kernels[i]=list(map(int, args.filter1_kernels[i]))
 
     stages=args.stages ################2
     epoch_start = 1
