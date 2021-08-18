@@ -163,7 +163,7 @@ class disparityregression(nn.Module):
         return out
 
 class CostVolumeFiltering(nn.Module):
-    def __init__(self, is_filter1_differ,filter1_kernels,fact_kernels,ch_in, ch_out, subspace_scale, stream_axes,BN_1D,BN_2D,BN_1D_last,model_bn):
+    def __init__(self, is_filter1_differ,filter1_kernels,fact_kernels,ch_in, ch_out, subspace_scale, stream_axes,BN_1D,BN_2D,BN_1D_last,model_bn,use_l1_norm=1):
         super().__init__()
         assert (is_filter1_differ == 1 or is_filter1_differ ==0), "is_filter1_differ argument must have value 0 or 1"
         no_streams = len(stream_axes)
@@ -173,26 +173,48 @@ class CostVolumeFiltering(nn.Module):
             for i, stream in enumerate(factorizer_filter1.streams):
                 for _ in range(1): 
                     self.filterBlocks.append(SpatioTemporalConv(stream,ch_in,ch_out,model_bn,False,BN_1D,BN_2D,BN_1D_last))
+                    if use_l1_norm == 1:
+                        ch_in == ch_out
         ####
         factorizer = Factorizer(fact_kernels, ch_in, ch_out, subspace_scale, stream_axes)
         for i, stream in enumerate(factorizer.streams):
-            for _ in range(4-is_filter1_differ): #4
-                self.filterBlocks.append(SpatioTemporalConv(stream,ch_in,ch_out,model_bn,False,BN_1D,BN_2D,BN_1D_last))
+            rem_blocks = 4-is_filter1_differ
+            if rem_blocks == 3: # if is_filter1_differ == 1 and use_l1_norm==1
+                for i in range(rem_blocks): #3
+                    self.filterBlocks.append(SpatioTemporalConv(stream,ch_in,ch_out,model_bn,False,BN_1D,BN_2D,BN_1D_last))
+            else:  #if is_filter1_differ == 0
+                if use_l1_norm == 1:
+                    for i in range(rem_blocks): #4
+                        if i == 0 :
+                            self.filterBlocks.append(SpatioTemporalConv(stream,ch_in,ch_out,model_bn,False,BN_1D,BN_2D,BN_1D_last))
+                        else:
+                            ch_in = ch_out
+                            self.filterBlocks.append(SpatioTemporalConv(stream,ch_in,ch_out,model_bn,False,BN_1D,BN_2D,BN_1D_last))
+                else:
+                     for i in range(rem_blocks): #4
+                        self.filterBlocks.append(SpatioTemporalConv(stream,ch_in,ch_out,model_bn,False,BN_1D,BN_2D,BN_1D_last))
             self.filterBlocks.append(SpatioTemporalConv(stream,ch_in,1,model_bn,True))
             
     def forward(self, x):
+        #i =0
         for f in self.filterBlocks:
+            #print("x size for block i= ", i, x.size())
             x= f(x)
+            #i = i+1
         return x
 
 class StereoNet(nn.Module):
-    def __init__(self, k, r, is_filter1_differ,filter1_kernels,fact_kernels,BN_1D,BN_2D,BN_1D_last,model_bn,maxdisp=192):
+    def __init__(self, k, r, is_filter1_differ,filter1_kernels,fact_kernels,BN_1D,BN_2D,BN_1D_last,model_bn,use_l1_norm=1,maxdisp=192):
         super().__init__()
+        self.use_l1_norm = use_l1_norm
         self.maxdisp = maxdisp
         self.k = k
         self.r = r
         self.feature_extraction = FeatureExtraction(k,model_bn)
-        self.filter = CostVolumeFiltering(is_filter1_differ,filter1_kernels,fact_kernels,32, 32, 1, [1],BN_1D,BN_2D,BN_1D_last,model_bn)
+        if self.use_l1_norm == 1:
+            self.filter = CostVolumeFiltering(is_filter1_differ,filter1_kernels,fact_kernels,1, 32, 1, [1],BN_1D,BN_2D,BN_1D_last,model_bn)
+        else:
+            self.filter = CostVolumeFiltering(is_filter1_differ,filter1_kernels,fact_kernels,32, 32, 1, [1],BN_1D,BN_2D,BN_1D_last,model_bn)
         
         self.edge_aware_refinements = nn.ModuleList()
         for _ in range(self.r): ### my change from 1 to 4
@@ -211,7 +233,12 @@ class StereoNet(nn.Module):
                 cost[:, :, i, :, i:] = refimg_feature[ :, :, :, i:] - targetimg_feature[:, :, :, :-i]
             else:
                 cost[:, :, i, :, :] = refimg_feature - targetimg_feature
+        
+        if self.use_l1_norm == 1:
+            cost = (torch.sum(torch.abs(cost),1)).unsqueeze(1)
+
         cost = cost.contiguous() # cost here is [1, 32, 24, 46, 154] 
+        #print("cost size: ", cost.size())
         cost = self.filter(cost)  # [1, 1, 24, 46, 154]
         cost = torch.squeeze(cost, 1) # [1, 24, 46, 154]
         pred =soft_argmin(cost)
