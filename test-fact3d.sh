@@ -3,7 +3,7 @@ stages=4
 dataset=sceneflow # kitti   sceneflow
 model=cf_fact3d # org cf_sepconv  cf_fact3d
 mode=test # train   finetune    test
-datapath=/home/alghoul/myenv/FlyingThings3D # /home/alghoul/myenv/FlyingThings3D    /home/alghoul/myenv/kitti2015/training
+datapath=/ds-av/public_datasets/freiburg_sceneflow_subset/raw #/home/alghoul/myenv/FlyingThings3D # /home/alghoul/myenv/FlyingThings3D    /home/alghoul/myenv/kitti2015/training
 datatype=2015
 flip_vertical=1
 epochs=100
@@ -21,7 +21,7 @@ with_quant=0
 quantWL=16 #10
 quantFL=8 #8
 ####for testing
-testFile=/cf_fact3d_fin_sceneflow-2015-2021_01_24-18_06_08-epoch-100-loss3-0.515-lossesSum-3.316.pth
+testFile=/sceneflow_model_cf_fact3d_4stages/checkpoints/cf_fact3d_fin_sceneflow-2015-2021_08_17-19_33_42-epoch-100-loss3-0.824-lossesSum-4.683.pth #/cf_fact3d_fin_sceneflow-2015-2021_01_24-18_06_08-epoch-100-loss3-0.515-lossesSum-3.316.pth
 ### for resuming
 resume=0 # resume path
 resumeFile=None #/kitti_model_cf_fact3d_3stages/checkpoints/cf_fact3d_fin_kitti-2015-2020_12_19-16_03_29-epoch-2-loss2-10.031-lossesSum-31.297.pth
@@ -31,8 +31,8 @@ BN_1D_last=1
 BN_1D=1
 BN_2D=0
 is_filter1_differ=0
-filter1_kernels="311 311"
-fact_kernels="331 311 311"
+filter1_kernels="331 113 113"
+fact_kernels="331 113 113"
 CUDA_VISIBLE_DEVICES=0 python  args_file.py --stages $stages --dataset $dataset --model $model --mode $mode --datapath $datapath \
                                             --datatype $datatype --flip_vertical $flip_vertical --epochs $epochs --lr $lr --train_bsize $train_bsize \
                                             --test_bsize $test_bsize --save_path $save_path --print_freq $print_freq \

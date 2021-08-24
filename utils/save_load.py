@@ -110,7 +110,7 @@ def load_dataset(args):
         from dataloader import SecenFlowLoaderMy as DA
         
         train_left_img, train_right_img, train_left_disp, train_left_disp_occ ,test_left_img, test_right_img, test_left_disp, test_left_disp_occ= lt.dataloader(
-            args.datapath,data_range_train= 21818,data_range_Val=4248) #200 4248
+            args.datapath,data_range_train= 10,data_range_Val=10) #21818 4248
         '''
         train_left_img, train_right_img, train_left_disp, train_left_disp_occ ,test_left_img, test_right_img, test_left_disp, test_left_disp_occ = lt.dataloader(
             args.datapath,data_range_train= 7,data_range_Val=3) #200 4248
