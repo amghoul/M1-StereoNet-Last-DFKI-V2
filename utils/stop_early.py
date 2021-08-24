@@ -36,7 +36,7 @@ def stop_early(args,model,optimizer,scheduler,log,current_val_error,best_error,t
             temp_sheduler=best_model_dict['sheduler']
             temp_best_losses_stages=best_model_dict['temp_min_loss']
 
-            save_chckpoint(best_model,temp_avg_train_loss_stage,temp_epoch,temp_optimizer_state_dict,temp_sheduler,temp_best_losses_stages,savefilenameEarlyStopping)
+            save_chckpoint(args, best_model,temp_avg_train_loss_stage,temp_epoch,temp_optimizer_state_dict,temp_sheduler,temp_best_losses_stages,savefilenameEarlyStopping)
 
             log.info('+++++++++++++++++++ saved early stopping model ended above at epoch: '+ str(epoch)+' ++++++++++++++++')
     return best_model,no_improvement_epochs,best_model_dict,ealryStoppedPaths,best_error,earlyStoppedEpochs
