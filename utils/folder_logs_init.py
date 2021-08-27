@@ -48,7 +48,7 @@ def create_result_folders_org(args,modelName,stages ):
     return current_directory,checkpoints_path,logs_path,test_results_path
 
 def create_result_folders(args,modelName,stages ):
-    current_directory = os.path.abspath(os.getcwd())+"/drive/MyDrive/StereoNet-Last-DFKI" ## for colab
+    current_directory = os.path.abspath(os.getcwd()) #+"/drive/MyDrive/StereoNet-Last-DFKI" ## for colab
     if args.with_quant == 1:
         if args.dataset == "kitti":
             foldersToCreate=[ args.save_path, args.dataset+'_'+args.datatype+'_model_'+modelName+'_withQuant_'+str(stages)+'stages','checkpoints','finetune_train_logs','test_results']
@@ -105,17 +105,57 @@ def inialize_log_file(args):
         path_file_GL= logs_path +'/' + args.model+'-'+args.mode +'-'+args.dataset+'-'+args.datatype+'-GL-'+str(args.stages)+'stages-'+timestr1+'.txt'
         path_file_losses = logs_path +'/' + args.model+'-'+args.mode +'-'+args.dataset+'-'+args.datatype+'-losses-'+str(args.stages)+'stages-'+timestr1+'.txt'
         valid_file_results = test_results_path +'/' + args.model+'-'+args.mode +'-'+args.dataset+'-'+args.datatype+'-losses-'+str(args.abs_thr)+'-px-'+str(args.stages)+'stages-'+timestr1+'.txt'
-    if args.stages ==2 and args.mode != 'test':
+    if args.dataset == "kitti":
+        if args.datatype == '2015':
+            mask_names=['allw','allwo','bgw','bgwo','fgw','fgwo','occw','occwo','noccw','noccwo'] # w: with rel_threshold, wo: without rel_threshold
+        else: #args.datatype == '2012':
+            mask_names=['allw','allwo','occw','occwo','noccw','noccwo'] # w: with rel_threshold, wo: without rel_threshold
+    else:
+        mask_names=['allw','allwo','occw','occwo','noccw','noccwo'] # w: with rel_threshold, wo: without rel_threshold
+    thr_list = [1,2,3]
+    if args.stages ==1 and args.mode != 'test':
         with open(path_file_losses, 'a+') as f:
-            f.write("epoch:Tr_loss0: Tr_loss1: Te_loss0: Te_loss1: Te_EPE0: Te_EPE1: Te_outlires0: Te_outlires1: Tr_sum_losses: Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
+            f.write("epoch:Tr_loss0:Te_loss0:Te_EPE0:")
+            for x in range(args.stages):
+                for i in range(len(mask_names)):
+                    for t in range(len(thr_list)):
+                        f.write(mask_names[i])
+                        f.write("_thr_%d" % (thr_list[t]))
+                        f.write("_st_%d:" % (x))
+            f.write("Tr_sum_losses:Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
+            f.close()
+    elif args.stages ==2 and args.mode != 'test':
+        with open(path_file_losses, 'a+') as f:
+            f.write("epoch:Tr_loss0:Tr_loss1:Te_loss0:Te_loss1:Te_EPE0:Te_EPE1:")
+            for x in range(args.stages):
+                for i in range(len(mask_names)):
+                    for t in range(len(thr_list)):
+                        f.write(mask_names[i])
+                        f.write("_thr_%d" % (thr_list[t]))
+                        f.write("_st_%d:" % (x))
+            f.write("Tr_sum_losses:Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
             f.close()
     elif args.stages ==3 and args.mode != 'test':
         with open(path_file_losses, 'a+') as f:
-            f.write("epoch:Tr_loss0: Tr_loss1: Tr_loss2: Te_loss0: Te_loss1: Te_loss2: Te_EPE0: Te_EPE1: Te_EPE2: Te_outlires0: Te_outlires1: Te_outlires2: Tr_sum_losses: Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
+            f.write("epoch:Tr_loss0:Tr_loss1:Tr_loss2:Te_loss0:Te_loss1:Te_loss2:Te_EPE0:Te_EPE1:Te_EPE2:")
+            for x in range(args.stages):
+                for i in range(len(mask_names)):
+                    for t in range(len(thr_list)):
+                        f.write(mask_names[i])
+                        f.write("_thr_%d" % (thr_list[t]))
+                        f.write("_st_%d:" % (x))
+            f.write("Tr_sum_losses:Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
             f.close()
     elif args.stages ==4 and args.mode != 'test':
         with open(path_file_losses, 'a+') as f:
-            f.write("epoch:Tr_loss0: Tr_loss1: Tr_loss2: Tr_loss3: Te_loss0: Te_loss1: Te_loss2: Te_loss3: Te_EPE0: Te_EPE1: Te_EPE2: Te_EPE3: Te_outlires0: Te_outlires1: Te_outlires2: Te_outlires3: Tr_sum_losses: Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
+            f.write("epoch:Tr_loss0:Tr_loss1:Tr_loss2:Tr_loss3:Te_loss0:Te_loss1:Te_loss2:Te_loss3:Te_EPE0:Te_EPE1:Te_EPE2:Te_EPE3:")
+            for x in range(args.stages):
+                for i in range(len(mask_names)):
+                    for t in range(len(thr_list)):
+                        f.write(mask_names[i])
+                        f.write("_thr_%d" % (thr_list[t]))
+                        f.write("_st_%d:" % (x))
+            f.write("Tr_sum_losses:Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
             f.close()
     if args.mode != 'test':
         with open(path_file_GL, 'a+') as f_GL:

@@ -143,7 +143,10 @@ def test_from_training(args,dataloader, model, log):
     EPES_summary = {}
     losses_dict={}
     test_sum_stages_losses={}
-    outliers_summary = defaultdict(list)
+    #outliers_summary = defaultdict(list)
+    outliers_summary1 = defaultdict(list)
+    outliers_summary2 = defaultdict(list)
+    outliers_summary3 = defaultdict(list)
     if args.dataset == "kitti":
         if args.datatype == '2015':
             mask_names=['allw','allwo','bgw','bgwo','fgw','fgwo','occw','occwo','noccw','noccwo'] # w: with rel_threshold, wo: without rel_threshold
@@ -157,7 +160,12 @@ def test_from_training(args,dataloader, model, log):
         Outliers_rate.append(0)
     
     for item in mask_names:
-        outliers_summary[item]=[AverageMeter() for _ in range(stages)]#[0,0,0,0]
+        #outliers_summary[item]=[AverageMeter() for _ in range(stages)]#[0,0,0,0]
+        ##########
+        outliers_summary1[item]=[AverageMeter() for _ in range(stages)]#[0,0,0,0]
+        outliers_summary2[item]=[AverageMeter() for _ in range(stages)]#[0,0,0,0]
+        outliers_summary3[item]=[AverageMeter() for _ in range(stages)]#[0,0,0,0]
+        ############
         EPES_summary[item]=[AverageMeter() for _ in range(stages)]
         losses_dict[item]=[AverageMeter() for _ in range(stages)]
         test_sum_stages_losses[item]=0.0
@@ -210,10 +218,24 @@ def test_from_training(args,dataloader, model, log):
                         continue
                     output = torch.squeeze(outputs[x], 1)
                     EPES_summary[mask_names[i]][x].update((output[mask] - disp_L[mask]).abs().mean(),args.test_bsize)
+                    '''
                     if mask_names[i][-1] == 'w': 
                         outliers_summary[mask_names[i]][x].update( Outliers(mask,output,disp_L,ABS_THRESH,REL_THRESH),args.test_bsize)
                     else:
                         outliers_summary[mask_names[i]][x].update( Outliers(mask,output,disp_L,ABS_THRESH,REL_THRESH, False),args.test_bsize)
+                    '''
+                    ###################### calculate outliers for threshold 1,2 and 3
+                    if mask_names[i][-1] == 'w': 
+                        outliers_summary1[mask_names[i]][x].update( Outliers(mask,output,disp_L,1,REL_THRESH),args.test_bsize)
+                        outliers_summary2[mask_names[i]][x].update( Outliers(mask,output,disp_L,2,REL_THRESH),args.test_bsize)
+                        outliers_summary3[mask_names[i]][x].update( Outliers(mask,output,disp_L,3,REL_THRESH),args.test_bsize)
+
+                    else:
+                        outliers_summary1[mask_names[i]][x].update( Outliers(mask,output,disp_L,1,REL_THRESH, False),args.test_bsize)
+                        outliers_summary2[mask_names[i]][x].update( Outliers(mask,output,disp_L,2,REL_THRESH, False),args.test_bsize)
+                        outliers_summary3[mask_names[i]][x].update( Outliers(mask,output,disp_L,3,REL_THRESH, False),args.test_bsize)
+
+                    #######################
                     '''
                     if args.dataset == "kitti":
                         loss.append(smooth_L1_loss_mask(output,disp_L,mask,args))
@@ -224,24 +246,45 @@ def test_from_training(args,dataloader, model, log):
                     losses_dict[mask_names[i]][x].update(loss[x],args.test_bsize)
             test_sum_stages_losses[mask_names[i]]+=sum(loss)
     
-    info_test = ', '.join(['#############Start_testing from training'])               
+    info_test = ', '.join(['#############Start_testing from training']) 
+    info_outl="Thr1 --> "
+    info_out2="Thr2 --> "
+    info_out3="Thr3 --> "             
     for i in range(len(mask_names)):
         if mask_names[i][-1] == 'w':
             info_str_epe = ' '.join(['Stage{} ( avg_EPE {:.2f} - avg_loss {:.2f} )'.format(x, EPES_summary[mask_names[i]][x].avg, losses_dict[mask_names[i]][x].avg) for x in range(stages)])
-            info_str_outl = ' '.join(['Stage{} ({:.2f} )'.format(x, outliers_summary[mask_names[i]][x].avg*100) for x in range(stages)])
+            #info_str_outl = ' '.join(['Stage{} ({:.2f} )'.format(x, outliers_summary[mask_names[i]][x].avg*100) for x in range(stages)])
+            ##################
+            info_str_outl = ' '.join(['Stage{} ({:.2f} )'.format(x, outliers_summary1[mask_names[i]][x].avg*100) for x in range(stages)])
+            info_str_out2 = ' '.join(['Stage{} ({:.2f} )'.format(x, outliers_summary2[mask_names[i]][x].avg*100) for x in range(stages)])
+            info_str_out3 = ' '.join(['Stage{} ({:.2f} )'.format(x, outliers_summary3[mask_names[i]][x].avg*100) for x in range(stages)])
+            #########
             info_sum_losses = ' sum_stages_losses {:.3f}'.format(test_sum_stages_losses[mask_names[i]]/length_loader)
             log.info('D1-{} Avg_test_EPE '.format(mask_names[i][:-1]) + info_str_epe+info_sum_losses)
-            log.info('D1-{} Avg_outliers '.format(mask_names[i][:-1]) + info_str_outl)
+            #log.info('D1-{} Avg_outliers '.format(mask_names[i][:-1]) + info_str_outl)
+            ###########
+            log.info('D1-{} Avg_outliers '.format(mask_names[i][:-1]) + info_outl + info_str_outl)
+            log.info('D1-{} Avg_outliers '.format(mask_names[i][:-1]) + info_out2 + info_str_out2)
+            log.info('D1-{} Avg_outliers '.format(mask_names[i][:-1]) + info_out3 + info_str_out3)
+            ##########
             
     return_avg_losses=[]
     return_avg_EPEs=[]
     return_test_sum_stages_losses=[]
-    return_outliers_sumary=[]
+    #return_outliers_sumary=[]
+    return_outliers_sumary1=[]
+    return_outliers_sumary2=[]
+    return_outliers_sumary3=[]
     for i in range(len(mask_names)):
         if mask_names[i][-1] == 'w':
             return_avg_losses.append([losses_dict[mask_names[i]][x].avg.item() for x in range(stages)])
             return_avg_EPEs.append([EPES_summary[mask_names[i]][x].avg.item() for x in range(stages)])
-            return_outliers_sumary.append([outliers_summary[mask_names[i]][x].avg.item()*100 for x in range(stages)])
+            #return_outliers_sumary.append([outliers_summary[mask_names[i]][x].avg.item()*100 for x in range(stages)])
             return_test_sum_stages_losses.append(test_sum_stages_losses[mask_names[i]].item()/length_loader)
+        ##############
+        return_outliers_sumary1.append([outliers_summary1[mask_names[i]][x].avg.item()*100 for x in range(stages)])
+        return_outliers_sumary2.append([outliers_summary2[mask_names[i]][x].avg.item()*100 for x in range(stages)])
+        return_outliers_sumary3.append([outliers_summary3[mask_names[i]][x].avg.item()*100 for x in range(stages)])
+        #############
 
-    return return_avg_losses,return_avg_EPEs,mask_names,return_test_sum_stages_losses,return_outliers_sumary
+    return return_avg_losses,return_avg_EPEs,mask_names,return_test_sum_stages_losses,return_outliers_sumary1,return_outliers_sumary2,return_outliers_sumary3 #return_outliers_sumary

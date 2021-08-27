@@ -113,7 +113,7 @@ def select_model_mode(args,log,root_path):
 
 def main(args):
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+    #os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
     args.cuda = not args.no_cuda and torch.cuda.is_available()
     #torch.manual_seed(args.seed)
     if args.cuda:
@@ -140,7 +140,10 @@ def main(args):
     test_train_losses={}
     test_train_EPEs={}
     test_train_sum_stages_losses={}
-    test_train_outliers_sumary={}
+    #test_train_outliers_sumary={}
+    test_train_outliers_sumary1={}
+    test_train_outliers_sumary2={}
+    test_train_outliers_sumary3={}
     ealryStoppedPaths=[]
     earlyStoppedEpochs=[]
     ### for validaion error early stopping
@@ -167,6 +170,13 @@ def main(args):
     TrainImgLoader, TestImgLoader = load_dataset(args)
     
     model,optimizer,scheduler = select_model_mode(args,log,root_path)
+    max_checkpoints_to_save = args.max_checkpoints_to_save
+    threshold_overfit_epochs = args.threshold_overfit_epochs
+    best_checkpoints = save_best_checkpoints(checkpoints_path,max_checkpoints_to_save)
+    check_train_overfit = check_overfit(threshold_overfit_epochs)
+    threshold_steadystate_epochs=threshold_overfit_epochs
+    check_train_steadystate = check_steadyState(threshold_steadystate_epochs)
+    
     ##############
     log.info("GPU is: " + torch.cuda.get_device_name(torch.cuda.current_device()))
     log.info('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
@@ -182,8 +192,10 @@ def main(args):
         if args.resume == 1:
             resumeFile = root_path+ "/" + args.save_path+ args.resumeFile
             if os.path.isfile(resumeFile):
-                model, return_avg_losses, optimizer, scheduler, epoch_start, current_lr,minLoss,saved_args = load_checkpoint(
+                model, return_avg_losses, optimizer, scheduler, epoch_start, current_lr,minLoss,saved_args,other_returned_values = load_checkpoint(
                     resumeFile,model,optimizer,scheduler)
+                if len(other_returned_values) != 0:
+                    best_checkpoints = other_returned_values[0]
                 log.info("-- checkpoint loaded and the training is resumed from epoch "+ str(epoch_start)+" --")
             else:
                 log.info("The resume file is: "+ resumeFile)
@@ -198,99 +210,137 @@ def main(args):
         else:
             log.info("*********The_initial_learning_rate: {:.12f} ".format(optimizer.param_groups[0]['lr']))
         start_full_time = time.time()
+        if args.epochs <=  epoch_start:
+            if args.resume == 1:
+                log.info("-----The model will resume from epoch "+str(epoch_start)+ ", so epochs value "+ str(args.epochs)+ " in argss file must be larger than "+ str(epoch_start) +" ------")
+                exit()
+            else:
+                log.info("-----the model will start training or finetuning from epoch " + str(epoch_start)+", so epochs value "+ str(args.epochs)+ " in argss file must be larger than "+ str(epoch_start) +" ------")
+                exit()
         for epoch in range(epoch_start, args.epochs+1):
-            timestr = time.strftime("%Y_%m_%d-%H_%M_%S")
-            log.info('############## This is %d-th epoch' % epoch +" ###############")
-            epoch_train_start_time= time.time()
-            
-            if args.with_quant ==1:
-                return_avg_losses,return_sum_stages_losses,float_model_dict = train(args,TrainImgLoader, model, optimizer, log, float_model_dict,epoch)
-            else:
-                return_avg_losses,return_sum_stages_losses,float_model_dict = train(args,TrainImgLoader, model, optimizer, log, None,epoch)
-            
-            epoch_train_end_time= time.time()
-            losses_All_Stages[epoch]=return_avg_losses
-            losses_sum_All_Stages[epoch]=return_sum_stages_losses
-            
-            if args.with_quant ==1:
-                checkName = args.model+'_fin_withQuant_'+args.dataset+'-'+args.datatype+'-'+timestr+'-epoch-'+str(epoch)+'-loss'+str(args.stages-1)+'-'+str(round(return_avg_losses[args.stages-1],3))+'-lossesSum-'+str(round(return_sum_stages_losses,3))+'.pth'
-            else:
-                checkName = args.model+'_fin_'+args.dataset+'-'+args.datatype+'-'+timestr+'-epoch-'+str(epoch)+'-loss'+str(args.stages-1)+'-'+str(round(return_avg_losses[args.stages-1],3))+'-lossesSum-'+str(round(return_sum_stages_losses,3))+'.pth'
-            
-            savefilename = checkpoints_path + '/' + checkName
-            minLoss = save_best_lossess(args,return_avg_losses,return_sum_stages_losses,minLoss,epoch,savefilename) 
-            if args.dataset == "kitti":
-                scheduler,optimizer = adjust_learning_rate(args,scheduler,optimizer, epoch,log)
-            else:
-                scheduler,optimizer = adjust_learning_rate(args,scheduler,optimizer, epoch,log)
-                #scheduler.step()
-                #log.info("*********The_learning_rate is: {:.12f} ".format(optimizer.param_groups[0]['lr']))
-           
-            if epoch % args.checkpoint_save_thr == 0: # 100
-                print(savefilename)
-                save_chckpoint(args,model,return_avg_losses,epoch,optimizer,scheduler,minLoss,savefilename)
-            
-            prev_return_avg_losses = return_avg_losses[:]
-            prev_sum_stages_losses = return_sum_stages_losses
-            ##### validation for each epoch
-            log.info('##### validation for epoch '+ str(epoch)+ '#####')
-            epoch_test_start_time= time.time()
-            #if epoch % 5 == 0:
-            test_return_avg_losses,test_return_avg_EPEs,mask_names,return_test_sum_stages_losses,return_outliers_sumary =test_from_training(args,TestImgLoader, model,log)
-            
-            epoch_test_end_time= time.time()
+            is_steadystate, steadystate_started_epoch = check_train_steadystate.get_steadystate_status()
+            is_overfit, overfit_started_epoch = check_train_overfit.get_overfit_status()
+            if is_overfit == 1:
+                log.info("!!!!!!!!!!! We reached overfit for " + str(threshold_overfit_epochs) + " epochs. Overfit started at epoch: " + str(overfit_started_epoch))
+                break
+            elif is_steadystate ==1:
+                log.info("!!!!!!!!!!! We reached steady state for " + str(threshold_steadystate_epochs) + " epochs. steady state started at epoch: " + str(steadystate_started_epoch))
+                break
+            else: # no over fit or steady state
+                timestr = time.strftime("%Y_%m_%d-%H_%M_%S")
+                log.info('############## This is %d-th epoch' % epoch +" ###############")
+                epoch_train_start_time= time.time()
+                
+                if args.with_quant ==1:
+                    return_avg_losses,return_sum_stages_losses,float_model_dict = train(args,TrainImgLoader, model, optimizer, log, float_model_dict,epoch)
+                else:
+                    return_avg_losses,return_sum_stages_losses,float_model_dict = train(args,TrainImgLoader, model, optimizer, log, None,epoch)
+                
+                epoch_train_end_time= time.time()
+                losses_All_Stages[epoch]=return_avg_losses
+                losses_sum_All_Stages[epoch]=return_sum_stages_losses
+                
+                if args.with_quant ==1:
+                    checkName = args.model+'_fin_withQuant_'+args.dataset+'-'+args.datatype+'-'+timestr+'-epoch-'+str(epoch)+'-loss'+str(args.stages-1)+'-'+str(round(return_avg_losses[args.stages-1],3))+'-lossesSum-'+str(round(return_sum_stages_losses,3))+'.pth'
+                else:
+                    checkName = args.model+'_fin_'+args.dataset+'-'+args.datatype+'-'+timestr+'-epoch-'+str(epoch)+'-loss'+str(args.stages-1)+'-'+str(round(return_avg_losses[args.stages-1],3))+'-lossesSum-'+str(round(return_sum_stages_losses,3))+'.pth'
+                
+                if args.dataset == "kitti":
+                    scheduler,optimizer = adjust_learning_rate(args,scheduler,optimizer, epoch,log)
+                else:
+                    scheduler,optimizer = adjust_learning_rate(args,scheduler,optimizer, epoch,log)
+                    #scheduler.step()
+                    #log.info("*********The_learning_rate is: {:.12f} ".format(optimizer.param_groups[0]['lr']))
 
-            test_train_losses[ epoch]=test_return_avg_losses
-            test_train_EPEs[ epoch]=test_return_avg_EPEs
-            test_train_sum_stages_losses[ epoch]=return_test_sum_stages_losses
-            test_train_outliers_sumary[epoch]= return_outliers_sumary
-            ### saving losses
-            
-            save_losses(optimizer,path_file_losses, epoch,stages,losses_All_Stages,test_train_losses,test_train_EPEs,losses_sum_All_Stages,
-                test_train_sum_stages_losses,test_train_outliers_sumary,epoch_train_end_time,epoch_train_start_time,epoch_test_end_time,epoch_test_start_time,scheduler)
-            
-            ############### calculate the generalaization training and testing error
-            sumErrTr +=losses_sum_All_Stages[epoch]
-            sumErrVal += test_train_sum_stages_losses[ epoch][0]
-            
-            if losses_sum_All_Stages[epoch] < temp_minTrErr:
-                temp_minTrErr = losses_sum_All_Stages[epoch]
-            
-            if test_train_sum_stages_losses[ epoch][0] < temp_minValErr:
-                temp_minValErr = test_train_sum_stages_losses[ epoch][0]
-            
-            if epoch % split_epochs == 0:
-                ####for training losss
-                avgTrErr_for_split_epochs,minTrErr_for_split_epochs,GL_Tr_for_split_epochs,temp_minTrErr,sumErrTr =get_avgErr_SPlitEpochs(
-                    avgTrErr_for_split_epochs,minTrErr_for_split_epochs,GL_Tr_for_split_epochs,sumErrTr,split_epochs,temp_minTrErr)
-                ####for validation or testing loss
-                avgValErr_for_split_epochs,minValErr_for_split_epochs,GL_Val_for_split_epochs,temp_minValErr,sumErrVal =get_avgErr_SPlitEpochs(
-                    avgValErr_for_split_epochs,minValErr_for_split_epochs,GL_Val_for_split_epochs,sumErrVal,split_epochs,temp_minValErr)
+                savefilename = checkpoints_path + '/' + checkName
+                minLoss = save_best_lossess(args,return_avg_losses,return_sum_stages_losses,minLoss,epoch,savefilename,model,optimizer,scheduler,best_checkpoints,check_train_overfit) 
+
+                if epoch % args.checkpoint_save_thr == 0: # 100
+                    print(savefilename)
+                    save_chckpoint(args,model,return_avg_losses,epoch,optimizer,scheduler,minLoss,savefilename,best_checkpoints)
+
+                # check if reached overfit or steady state
+                reach_overfit_or_steadystate(args, prev_sum_stages_losses, return_sum_stages_losses,epoch,check_train_overfit,check_train_steadystate)
+
+                prev_return_avg_losses = return_avg_losses[:]
+                prev_sum_stages_losses = return_sum_stages_losses
+
+                ##### validation for each epoch
+                log.info('##### validation for epoch '+ str(epoch)+ '#####')
+                epoch_test_start_time= time.time()
+                #if epoch % 5 == 0:
+                #test_return_avg_losses,test_return_avg_EPEs,mask_names,return_test_sum_stages_losses,return_outliers_sumary =test_from_training(args,TestImgLoader, model,log)
+                test_return_avg_losses,test_return_avg_EPEs,mask_names,return_test_sum_stages_losses,return_outliers_sumary1,return_outliers_sumary2,return_outliers_sumary3 =test_from_training(args,TestImgLoader, model,log)
+                epoch_test_end_time= time.time()
+
+                test_train_losses[ epoch]=test_return_avg_losses
+                test_train_EPEs[ epoch]=test_return_avg_EPEs
+                test_train_sum_stages_losses[ epoch]=return_test_sum_stages_losses
+                #test_train_outliers_sumary[epoch]= return_outliers_sumary
+                test_train_outliers_sumary1[epoch]= return_outliers_sumary1
+                test_train_outliers_sumary2[epoch]= return_outliers_sumary2
+                test_train_outliers_sumary3[epoch]= return_outliers_sumary3
+                ### saving losses
                 
-                start_avergaing = end_averaging + 1
-                end_averaging *= 2 
+                save_losses(mask_names,optimizer,path_file_losses, epoch,stages,losses_All_Stages,test_train_losses,test_train_EPEs,losses_sum_All_Stages,
+                    test_train_sum_stages_losses,test_train_outliers_sumary1,test_train_outliers_sumary2,test_train_outliers_sumary3,epoch_train_end_time,epoch_train_start_time,epoch_test_end_time,epoch_test_start_time,scheduler)
                 
-                save_GL(path_file_GL,avgTrErr_for_split_epochs[-1],minTrErr_for_split_epochs[-1],avgValErr_for_split_epochs[-1],
-                    minValErr_for_split_epochs[-1],GL_Tr_for_split_epochs[-1],GL_Val_for_split_epochs[-1])
-                ############early stopping condition
-                best_model_dict={}
-                best_model_dict['temp_return_avg_losses']=return_avg_losses
-                best_model_dict['temp_optimizer_state_dict']=optimizer
-                best_model_dict['sheduler']=scheduler
-                best_model_dict['temp_min_loss']=minLoss
-                best_model_dict['temp_epoch']=epoch
-                best_model_dict['temp_savefilenameEarlyStopping']='none'
-                best_model = copy.deepcopy(model)
+                ############### calculate the generalaization training and testing error
+                sumErrTr +=losses_sum_All_Stages[epoch]
+                sumErrVal += test_train_sum_stages_losses[ epoch][0]
                 
-                best_model,no_improvement_epochs,best_model_dict,ealryStoppedPaths,best_error,earlyStoppedEpochs = stop_early(
-                    args,model,optimizer,scheduler,log, avgValErr_for_split_epochs[-1],best_error,timestr,epoch,return_avg_losses, 
-                    return_sum_stages_losses,minLoss, earlyStoppedEpochs,n_stop_epochs,no_improvement_epochs,best_model,ealryStoppedPaths,
-                    best_model_dict,checkpoints_path)
+                if losses_sum_All_Stages[epoch] < temp_minTrErr:
+                    temp_minTrErr = losses_sum_All_Stages[epoch]
+                
+                if test_train_sum_stages_losses[ epoch][0] < temp_minValErr:
+                    temp_minValErr = test_train_sum_stages_losses[ epoch][0]
+                
+                if epoch % split_epochs == 0:
+                    ####for training losss
+                    avgTrErr_for_split_epochs,minTrErr_for_split_epochs,GL_Tr_for_split_epochs,temp_minTrErr,sumErrTr =get_avgErr_SPlitEpochs(
+                        avgTrErr_for_split_epochs,minTrErr_for_split_epochs,GL_Tr_for_split_epochs,sumErrTr,split_epochs,temp_minTrErr)
+                    ####for validation or testing loss
+                    avgValErr_for_split_epochs,minValErr_for_split_epochs,GL_Val_for_split_epochs,temp_minValErr,sumErrVal =get_avgErr_SPlitEpochs(
+                        avgValErr_for_split_epochs,minValErr_for_split_epochs,GL_Val_for_split_epochs,sumErrVal,split_epochs,temp_minValErr)
+                    
+                    start_avergaing = end_averaging + 1
+                    end_averaging *= 2 
+                    
+                    save_GL(path_file_GL,avgTrErr_for_split_epochs[-1],minTrErr_for_split_epochs[-1],avgValErr_for_split_epochs[-1],
+                        minValErr_for_split_epochs[-1],GL_Tr_for_split_epochs[-1],GL_Val_for_split_epochs[-1])
+                    ############early stopping condition
+                    best_model_dict={}
+                    best_model_dict['temp_return_avg_losses']=return_avg_losses
+                    best_model_dict['temp_optimizer_state_dict']=optimizer
+                    best_model_dict['sheduler']=scheduler
+                    best_model_dict['temp_min_loss']=minLoss
+                    best_model_dict['temp_epoch']=epoch
+                    best_model_dict['temp_savefilenameEarlyStopping']='none'
+                    best_model = copy.deepcopy(model)
+                    
+                    best_model,no_improvement_epochs,best_model_dict,ealryStoppedPaths,best_error,earlyStoppedEpochs = stop_early(
+                        args,model,optimizer,scheduler,log, avgValErr_for_split_epochs[-1],best_error,timestr,epoch,return_avg_losses, 
+                        return_sum_stages_losses,minLoss, earlyStoppedEpochs,n_stop_epochs,no_improvement_epochs,best_model,ealryStoppedPaths,
+                        best_model_dict,checkpoints_path)
             
         if args.with_quant ==1:
             model_save_path = checkpoints_path + '/' + 'checkpoint_withQuantize_finetune_kitti'+args.datatype+'-'+timestr+'-epoch-'+str(epoch)+'-loss'+str(args.stages-1)+'-'+str(round(return_avg_losses[args.stages-1],3))+'-lossesSum-'+str(round(return_sum_stages_losses,3))+'.pth'
-            save_chckpoint(args,model,return_avg_losses,epoch,optimizer,scheduler,minLoss,model_save_path)
+            save_chckpoint(args,model,return_avg_losses,epoch,optimizer,scheduler,minLoss,model_save_path,best_checkpoints)
         
+        if best_checkpoints.get_best_checkpoint() != None:
+            log.info('#################The best checkpoint is: minLoss, best_path, best_sum_stages_losses ##########')
+            min_loss_log=""
+            
+            for k,v in best_checkpoints.get_best_checkpoint()[0].items():
+                if k == 'checkpointPath' or k == 'epoch':
+                    min_loss_log = min_loss_log + ', '.join([k+": "+ str(v)])
+                else:
+                    min_loss_log = min_loss_log + ', '.join([k+": "+ str(round(v,4))])
+            log.info('Min losses are: '+ min_loss_log)
+            log.info("The name of the best checkpoint is: "+ best_checkpoints.get_best_checkpoint()[1])
+            log.info("The minimum sum stages loss is: " + str(best_checkpoints.get_best_checkpoint()[2]))
+        else:
+            log.info('#################The best checkpoint is empty ##########')
         log.info('full_training_time: {: 3f} Hours'.format((time.time() - start_full_time) / 3600))
 
     else : ## Test ##
@@ -300,8 +350,11 @@ def main(args):
         if os.path.isfile(testFile):
             ### loading saved values in the checkpoint
             if args.with_quant ==1:
-                model, t_avg_train_loss_stages, optimizer, scheduler, t_epoch, current_lr,temp_best_losses_stages,saved_args = load_checkpoint(
+                model, t_avg_train_loss_stages, optimizer, scheduler, t_epoch, current_lr,temp_best_losses_stages,saved_args,other_returned_values = load_checkpoint(
                     testFile,model,optimizer,scheduler)
+                if len(other_returned_values) != 0:
+                    best_checkpoints = other_returned_values[0]
+
                 if saved_args.with_quant ==0: # if the saved model not quantized previously
                     forward_num = FixedPoint(wl=args.quantWL, fl=args.quantFL, clamp=True, symmetric=False)
                     backward_num = FloatingPoint(exp=4, man=4)
@@ -311,9 +364,10 @@ def main(args):
                     quant_model_dict=quantize_model(model.state_dict(),args.quantWL,args.quantWL -args.quantFL)
                     model.load_state_dict(quant_model_dict)
             else:
-                model, t_avg_train_loss_stages, optimizer, scheduler, t_epoch, current_lr,temp_best_losses_stages,saved_args = load_checkpoint(
+                model, t_avg_train_loss_stages, optimizer, scheduler, t_epoch, current_lr,temp_best_losses_stages,saved_args,other_returned_values = load_checkpoint(
                         testFile,model,optimizer,scheduler)
-
+                if len(other_returned_values) != 0:
+                    best_checkpoints = other_returned_values[0]
             log.info('Testing model at epoch {} with: sum_losses_stages is {:.3f}, current_learning_rate {:.10f} '.format(
                 t_epoch,sum( t_avg_train_loss_stages[x] for x in range(len(t_avg_train_loss_stages))), current_lr))
             info_str3 = ', '.join(['Stage{} {:.3f}'.format(x, temp_best_losses_stages['loss'+str(x)]) for x in range(stages)])

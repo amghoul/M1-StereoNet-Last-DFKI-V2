@@ -204,7 +204,7 @@ class CostVolumeFiltering(nn.Module):
         return x
 
 class StereoNet(nn.Module):
-    def __init__(self, k, r, is_filter1_differ,filter1_kernels,fact_kernels,BN_1D,BN_2D,BN_1D_last,model_bn,use_l1_norm=1,maxdisp=192):
+    def __init__(self, k, r, is_filter1_differ,filter1_kernels,fact_kernels,BN_1D,BN_2D,BN_1D_last,model_bn,use_l1_norm=0,maxdisp=192):
         super().__init__()
         self.use_l1_norm = use_l1_norm
         self.maxdisp = maxdisp

@@ -47,6 +47,9 @@ parser.add_argument('--weight_decay', '--wd', default=1e-4, type=float, metavar=
 parser.add_argument('--stepsize', default=1, type=int, metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.6, type=float, help='learning rate decay parameter: Gamma')
 parser.add_argument('--checkpoint_save_thr', default=100, type=int, help='How many epochs to save a checkpoint')
+
+parser.add_argument('--max_checkpoints_to_save', default=10, type=int, help='How many best checkpoints to save')
+parser.add_argument('--threshold_overfit_epochs', default=50, type=int, help='number of epochs in which training loss strat increasing to consider the model was reacched to overfit')
 #############
 
 args = parser.parse_args() # uncomment colab
