@@ -220,10 +220,12 @@ class save_best_checkpoints(object):
         else:
             self.best_checks.sort(key=lambda index: index[2])
             remove_check_point = self.best_checks[-1][1]
-            os.remove(os.path.join(self.best_checkpoints_path, remove_check_point))
+            check_file_exists = os.path.isfile(os.path.join(self.best_checkpoints_path, remove_check_point))
+            if check_file_exists:
+                os.remove(os.path.join(self.best_checkpoints_path, remove_check_point))
             self.best_checks = self.best_checks[:-1]
             self.counter =self.counter - 1
-            self.update(args, model,return_avg_losses,epoch,optimizer,scheduler,minLoss)
+            self.update(args, model,return_avg_losses,epoch,optimizer,scheduler,minLoss,best_checkpoints)
 
     def get_best_checkpoint(self):
         self.best_checks.sort(key=lambda index: index[2])
