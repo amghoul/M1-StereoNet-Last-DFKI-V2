@@ -82,7 +82,7 @@
 
 ## <a name= reqs>Requirements to run the code</a>
 - The main packages required to the this code are:
-    - Python ==3.6
+    - Python==3.6
     - torchsummary==1.5.1
     - torchtext==0.7.0
     - torchvision==0.7.0+cu101
