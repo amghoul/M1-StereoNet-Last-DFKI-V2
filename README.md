@@ -69,6 +69,7 @@
  ┣ 📜args_file.py --> This file contains the arguments or parameters that required to run the code
  ┣ 📜finetune_2012.sh --> script to finetune the pretrained model on KITTI 2012
  ┣ 📜finetune_2015.sh --> script to finetune the pretrained model on KITTI 2015
+ ┣ 📜dataclasses_models.py --> contains the dataclasses models
  ┣ 📜main_file.py --> main file code which called from args_file.py
  ┣ 📜README.md
  ┣ 📜resume.sh --> script to resume training
