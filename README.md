@@ -11,7 +11,6 @@
   - [Requirements to run the code](#requirements-to-run-the-code)
   - [Dataset Path \& Structure](#dataset-path--structure)
   - [Main parameters to run the code](#main-parameters-to-run-the-code)
-  - [Project Arguments Reference (Project 2)](#project-arguments-reference-project-2)
     - [1. Selecting the Dataset](#1-selecting-the-dataset)
     - [2. Load Pretrained Model](#2-load-pretrained-model)
     - [3. Quantization](#3-quantization)
@@ -153,8 +152,6 @@
 
 ## <a name= args>Main parameters to run the code</a>
   These paramters are the main parameters to run the code:
-
-  ## Project Arguments Reference (Project 2)
 
 ### 1. Selecting the Dataset
 * `--dataset`: `{sceneflow, kitti}` (default: `"kitti"`) -> Select dataset to work on.
