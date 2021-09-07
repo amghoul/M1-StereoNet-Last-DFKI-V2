@@ -2,7 +2,7 @@ import copy
 from .save_load import *
 
 def stop_early(args,model,optimizer,scheduler,log,current_val_error,best_error,timestr,epoch,return_avg_losses,
-    return_sum_stages_losses,minLoss,earlyStoppedEpochs,n_stop_epochs,no_improvement_epochs,best_model,ealryStoppedPaths,best_model_dict,checkpoints_path):
+    return_sum_stages_losses,minLoss,earlyStoppedEpochs,n_stop_epochs,no_improvement_epochs,best_model,ealryStoppedPaths,best_model_dict,checkpoints_path,best_checkpoints):
     
     if current_val_error < best_error :
         best_error = current_val_error
@@ -36,7 +36,7 @@ def stop_early(args,model,optimizer,scheduler,log,current_val_error,best_error,t
             temp_sheduler=best_model_dict['sheduler']
             temp_best_losses_stages=best_model_dict['temp_min_loss']
 
-            save_chckpoint(args, best_model,temp_avg_train_loss_stage,temp_epoch,temp_optimizer_state_dict,temp_sheduler,temp_best_losses_stages,savefilenameEarlyStopping)
+            save_chckpoint(args, best_model,temp_avg_train_loss_stage,temp_epoch,temp_optimizer_state_dict,temp_sheduler,temp_best_losses_stages,savefilenameEarlyStopping,best_checkpoints)
 
             log.info('+++++++++++++++++++ saved early stopping model ended above at epoch: '+ str(epoch)+' ++++++++++++++++')
     return best_model,no_improvement_epochs,best_model_dict,ealryStoppedPaths,best_error,earlyStoppedEpochs
