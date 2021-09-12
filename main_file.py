@@ -137,6 +137,9 @@ def main(args):
     prev_sum_stages_losses=float('inf')
     losses_All_Stages={}
     losses_sum_All_Stages={}
+    epes_All_Stages={}
+    epes_sum_All_Stages={}
+    
     test_train_losses={}
     test_train_EPEs={}
     test_train_sum_stages_losses={}
@@ -192,7 +195,7 @@ def main(args):
         if args.resume == 1:
             resumeFile = root_path+ "/" + args.save_path+ args.resumeFile
             if os.path.isfile(resumeFile):
-                model, return_avg_losses, optimizer, scheduler, epoch_start, current_lr,minLoss,saved_args,other_returned_values = load_checkpoint(
+                model, return_avg_losses, ret_avg_train_epe_stage,optimizer, scheduler, epoch_start, current_lr,minLoss,saved_args,other_returned_values = load_checkpoint(
                     resumeFile,model,optimizer,scheduler)
                 if len(other_returned_values) != 0:
                     best_checkpoints = other_returned_values[0]
@@ -232,13 +235,15 @@ def main(args):
                 epoch_train_start_time= time.time()
                 
                 if args.with_quant ==1:
-                    return_avg_losses,return_sum_stages_losses,float_model_dict = train(args,TrainImgLoader, model, optimizer, log, float_model_dict,epoch)
+                    return_avg_losses,return_sum_stages_losses,float_model_dict,return_avg_epes,return_sum_stages_epes = train(args,TrainImgLoader, model, optimizer, log, float_model_dict,epoch)
                 else:
-                    return_avg_losses,return_sum_stages_losses,float_model_dict = train(args,TrainImgLoader, model, optimizer, log, None,epoch)
+                    return_avg_losses,return_sum_stages_losses,float_model_dict,return_avg_epes,return_sum_stages_epes = train(args,TrainImgLoader, model, optimizer, log, None,epoch)
                 
                 epoch_train_end_time= time.time()
                 losses_All_Stages[epoch]=return_avg_losses
                 losses_sum_All_Stages[epoch]=return_sum_stages_losses
+                epes_All_Stages[epoch]=return_avg_epes
+                epes_sum_All_Stages[epoch]=return_sum_stages_epes
                 
                 if args.with_quant ==1:
                     checkName = args.model+'_fin_withQuant_'+args.dataset+'-'+args.datatype+'-'+timestr+'-epoch-'+str(epoch)+'-loss'+str(args.stages-1)+'-'+str(round(return_avg_losses[args.stages-1],3))+'-lossesSum-'+str(round(return_sum_stages_losses,3))+'.pth'
@@ -253,11 +258,11 @@ def main(args):
                     #log.info("*********The_learning_rate is: {:.12f} ".format(optimizer.param_groups[0]['lr']))
 
                 savefilename = checkpoints_path + '/' + checkName
-                minLoss = save_best_lossess(args,return_avg_losses,return_sum_stages_losses,minLoss,epoch,savefilename,model,optimizer,scheduler,best_checkpoints,check_train_overfit) 
+                minLoss = save_best_lossess(args,return_avg_losses,return_sum_stages_losses,return_avg_epes,return_sum_stages_epes,minLoss,epoch,savefilename,model,optimizer,scheduler,best_checkpoints,check_train_overfit) 
 
                 if epoch % args.checkpoint_save_thr == 0: # 100
                     print(savefilename)
-                    save_chckpoint(args,model,return_avg_losses,epoch,optimizer,scheduler,minLoss,savefilename,best_checkpoints)
+                    save_chckpoint(args,model,return_avg_losses,return_avg_epes,epoch,optimizer,scheduler,minLoss,savefilename,best_checkpoints)
 
                 # check if reached overfit or steady state
                 reach_overfit_or_steadystate(args, prev_sum_stages_losses, return_sum_stages_losses,epoch,check_train_overfit,check_train_steadystate)
@@ -282,9 +287,9 @@ def main(args):
                 test_train_outliers_sumary3[epoch]= return_outliers_sumary3
                 ### saving losses
                 
-                save_losses(mask_names,optimizer,path_file_losses, epoch,stages,losses_All_Stages,test_train_losses,test_train_EPEs,losses_sum_All_Stages,
-                    test_train_sum_stages_losses,test_train_outliers_sumary1,test_train_outliers_sumary2,test_train_outliers_sumary3,epoch_train_end_time,epoch_train_start_time,epoch_test_end_time,epoch_test_start_time,scheduler)
-                
+                save_losses(mask_names,optimizer,path_file_losses, epoch,stages,losses_All_Stages,epes_All_Stages,test_train_losses,test_train_EPEs,losses_sum_All_Stages,epes_sum_All_Stages,
+                    test_train_sum_stages_losses,test_train_outliers_sumary1,test_train_outliers_sumary2,test_train_outliers_sumary3,epoch_train_end_time,epoch_train_start_time,epoch_test_end_time,epoch_test_start_time,scheduler)  
+
                 ############### calculate the generalaization training and testing error
                 sumErrTr +=losses_sum_All_Stages[epoch]
                 sumErrVal += test_train_sum_stages_losses[ epoch][0]
@@ -325,7 +330,7 @@ def main(args):
             
         if args.with_quant ==1:
             model_save_path = checkpoints_path + '/' + 'checkpoint_withQuantize_finetune_kitti'+args.datatype+'-'+timestr+'-epoch-'+str(epoch)+'-loss'+str(args.stages-1)+'-'+str(round(return_avg_losses[args.stages-1],3))+'-lossesSum-'+str(round(return_sum_stages_losses,3))+'.pth'
-            save_chckpoint(args,model,return_avg_losses,epoch,optimizer,scheduler,minLoss,model_save_path,best_checkpoints)
+            save_chckpoint(args,model,return_avg_losses,return_avg_epes,epoch,optimizer,scheduler,minLoss,model_save_path,best_checkpoints)
         
         if best_checkpoints.get_best_checkpoint() != None:
             log.info('#################The best checkpoint is: minLoss, best_path, best_sum_stages_losses ##########')
@@ -333,9 +338,9 @@ def main(args):
             
             for k,v in best_checkpoints.get_best_checkpoint()[0].items():
                 if k == 'checkpointPath' or k == 'epoch':
-                    min_loss_log = min_loss_log + ', '.join([k+": "+ str(v)])
+                    min_loss_log = min_loss_log + ', '.join([k+": "+ str(v)+", "])
                 else:
-                    min_loss_log = min_loss_log + ', '.join([k+": "+ str(round(v,4))])
+                    min_loss_log = min_loss_log + ', '.join([k+": "+ str(round(v,4))+", "])
             log.info('Min losses are: '+ min_loss_log)
             log.info("The name of the best checkpoint is: "+ best_checkpoints.get_best_checkpoint()[1])
             log.info("The minimum sum stages loss is: " + str(best_checkpoints.get_best_checkpoint()[2]))
@@ -350,7 +355,7 @@ def main(args):
         if os.path.isfile(testFile):
             ### loading saved values in the checkpoint
             if args.with_quant ==1:
-                model, t_avg_train_loss_stages, optimizer, scheduler, t_epoch, current_lr,temp_best_losses_stages,saved_args,other_returned_values = load_checkpoint(
+                model, t_avg_train_loss_stages, avg_train_epe_stage,optimizer, scheduler, t_epoch, current_lr,temp_best_losses_stages,saved_args,other_returned_values = load_checkpoint(
                     testFile,model,optimizer,scheduler)
                 if len(other_returned_values) != 0:
                     best_checkpoints = other_returned_values[0]
@@ -364,12 +369,17 @@ def main(args):
                     quant_model_dict=quantize_model(model.state_dict(),args.quantWL,args.quantWL -args.quantFL)
                     model.load_state_dict(quant_model_dict)
             else:
-                model, t_avg_train_loss_stages, optimizer, scheduler, t_epoch, current_lr,temp_best_losses_stages,saved_args,other_returned_values = load_checkpoint(
+                model, t_avg_train_loss_stages, t_avg_train_epe_stage, optimizer, scheduler, t_epoch, current_lr,temp_best_losses_stages,saved_args,other_returned_values = load_checkpoint(
                         testFile,model,optimizer,scheduler)
                 if len(other_returned_values) != 0:
                     best_checkpoints = other_returned_values[0]
-            log.info('Testing model at epoch {} with: sum_losses_stages is {:.3f}, current_learning_rate {:.10f} '.format(
-                t_epoch,sum( t_avg_train_loss_stages[x] for x in range(len(t_avg_train_loss_stages))), current_lr))
+            if t_avg_train_epe_stage != None:
+                log.info('Testing model at epoch {} with: sum_losses_stages is {:.3f} and sum_EPEs_stages is {:.3f}, current_learning_rate {:.10f} '.format(
+                    t_epoch,sum( t_avg_train_loss_stages[x] for x in range(len(t_avg_train_loss_stages))), sum( t_avg_train_epe_stage[x] for x in range(len(t_avg_train_epe_stage))),current_lr))
+            else:
+                log.info('Testing model at epoch {} with: sum_losses_stages is {:.3f} and current_learning_rate {:.10f} '.format(
+                    t_epoch,sum( t_avg_train_loss_stages[x] for x in range(len(t_avg_train_loss_stages))), current_lr))
+            
             info_str3 = ', '.join(['Stage{} {:.3f}'.format(x, temp_best_losses_stages['loss'+str(x)]) for x in range(stages)])
             log.info('The best loss is for epoch' +  str(temp_best_losses_stages['epoch']) +' with losses: '+ info_str3)
             log.info("*************** Saved Args in Checkpoint **************")
@@ -379,8 +389,9 @@ def main(args):
             log.info("*******************************************************")
             start_test_full_time = time.time()
             
-            total_outliers_summary,mask_names = test(args,TestImgLoader, model,test_results_path,log,valid_file_results)
-        
+            #total_outliers_summary,mask_names = test(args,TestImgLoader, model,test_results_path,log,valid_file_results)
+            outliers_summary1,outliers_summary2,outliers_summary3,mask_names = test(args,TestImgLoader, model,test_results_path,log,valid_file_results)
+                
             testing_time = time.time() - start_test_full_time
             log.info('The testing time is %d sec (%.3f min)' %(testing_time,testing_time/60))
             log.info('The result path is: '+ test_results_path)

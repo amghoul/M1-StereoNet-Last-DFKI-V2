@@ -1,3 +1,4 @@
+#train-v04
 from __future__ import print_function
 import torch
 import torch.nn.parallel
@@ -53,16 +54,19 @@ def adjust_learning_rate(args,scheduler,optimizer, epoch,log):
     return scheduler,optimizer
 
 def train(args,dataloader, model, optimizer, log, float_model_dict=None,epoch=1):
-
+    
     stages = args.stages #default 4, used 2
     with_quant =  args.with_quant
     losses = [AverageMeter() for _ in range(stages)]
+    EPEs = [AverageMeter() for _ in range(stages)]
     sum_stages_losses= []
+    sum_stages_EPEs= []
     length_loader = len(dataloader)
     counter = 0
 
     model.train()
     avg_sum_loss_all_stages_epoch=0
+    avg_sum_epe_all_stages_epoch=0
     for batch_idx, (imgL, imgR, disp_L, disp_L_occ_noc, obj_map_img,left_path,right_path) in enumerate(dataloader):
         ##disp_L_occ_noc : if dataset kitti then this variable fron noc, if dataset is FT3D then this variable is for occ
         imgL = imgL.float().cuda()
@@ -73,7 +77,7 @@ def train(args,dataloader, model, optimizer, log, float_model_dict=None,epoch=1)
             imgR = s_quant_PyTorch(imgR,args.quantWL,args.quantWL -args.quantFL )
 
         disp_L = disp_L.float().cuda()
-
+        
         outputs = model(imgL, imgR)
         outputs = [torch.squeeze(output, 1) for output in outputs]
         ###############
@@ -88,12 +92,16 @@ def train(args,dataloader, model, optimizer, log, float_model_dict=None,epoch=1)
                 loss.append(GERF_loss(outputs[i+1],disp_L, args))
         '''
         loss = [GERF_loss(outputs[0],disp_L, args)]
+        epe_list = [epe(outputs[0], disp_L, args)]
         for i in range(len(outputs)-1):
             loss.append(GERF_loss(outputs[i+1],disp_L, args))
+            epe_list.append(epe(outputs[i+1],disp_L, args))
         ########   
         counter +=1
         loss_all = sum(loss)/(args.itersize)
+        epe_all = sum(epe_list)/(args.itersize)
         sum_stages_losses.append(loss_all.item())
+        sum_stages_EPEs.append(epe_all.item())
         
         loss_all.backward()
         if with_quant == 1:
@@ -106,6 +114,7 @@ def train(args,dataloader, model, optimizer, log, float_model_dict=None,epoch=1)
 
         for idx in range(stages):
             losses[idx].update(loss[idx].item(),args.train_bsize)
+            EPEs[idx].update(epe_list[idx].item(),args.train_bsize)
             #losses[idx].update(loss[idx].item()/args.loss_weights[idx])
         if with_quant == 1: 
             float_model_dict = copy.deepcopy(model.state_dict())
@@ -114,24 +123,31 @@ def train(args,dataloader, model, optimizer, log, float_model_dict=None,epoch=1)
             model.load_state_dict(quant_model_dict)
         
         avg_sum_loss_all_stages=0
+        avg_sum_epe_all_stages=0
         for x in range(stages):
             avg_sum_loss_all_stages +=losses[x].avg
+            avg_sum_epe_all_stages +=EPEs[x].avg
 
         if batch_idx % args.print_freq == 0: #if batch_idx == 0 or batch_idx == 6:
-            info_str = ['Stage{} {:.3f} ( {:.3f} )'.format(x, losses[x].val, losses[x].avg) for x in range(stages)]
+            info_str = ["Loss % EPE"]
             info_str = ' '.join(info_str)
-            info_sum_losses = ' sum_stages_losses {:.3f} ( {:.3f} )'.format(sum_stages_losses[-1], avg_sum_loss_all_stages)
+            info_str = ['Stage{} {:.3f} % {:.3f} ( {:.3f} % {:.3f} )'.format(x, losses[x].val, EPEs[x].val, losses[x].avg, EPEs[x].avg) for x in range(stages)]
+            info_str = ' '.join(info_str)
+            info_sum_losses = ' sum_losses_epes {:.3f} % {:.3f} ( {:.3f} % {:.3f} )'.format(sum_stages_losses[-1],sum_stages_EPEs[-1], avg_sum_loss_all_stages,avg_sum_epe_all_stages)
             info_sum_losses = ''.join(info_sum_losses)
-            log.info('Epoch {} [{}/{}] {} {}'.format(epoch, batch_idx, length_loader, info_str,info_sum_losses))
+            log.info('Loss % EPE Epoch {} [{}/{}] {} {}'.format(epoch, batch_idx, length_loader, info_str,info_sum_losses))
     avg_sum_loss_all_stages_epoch += avg_sum_loss_all_stages   
-    info_str = ' '.join(['Stage{} {:.3f}'.format(x, losses[x].avg) for x in range(stages)])
-    info_sum_losses = ' sum_stages_losses {:.3f} ( {:.3f} )'.format(sum(sum_stages_losses)/length_loader, avg_sum_loss_all_stages_epoch)
-    log.info('Average_train_loss: ' + info_str +info_sum_losses)
+    avg_sum_epe_all_stages_epoch += avg_sum_epe_all_stages   
+    info_str = ' '.join(['Stage{} {:.3f} % {:.3f}'.format(x, losses[x].avg, EPEs[x].avg) for x in range(stages)])
+    info_sum_losses = ' sum_stages_losses % EPEs {:.3f} % {:.3f} ( {:.3f} % {:.3f} )'.format(sum(sum_stages_losses)/length_loader, sum(sum_stages_EPEs)/length_loader, avg_sum_loss_all_stages_epoch,avg_sum_epe_all_stages_epoch)
+    log.info('Average_train_loss % EPE: ' + info_str +info_sum_losses)
     return_avg_losses=[]
+    return_avg_epes=[]
     for x in range(stages):
         return_avg_losses.append(losses[x].avg)
+        return_avg_epes.append(EPEs[x].avg)
     
-    return return_avg_losses,sum(sum_stages_losses)/length_loader,float_model_dict
+    return return_avg_losses,sum(sum_stages_losses)/length_loader,float_model_dict,return_avg_epes,sum(sum_stages_EPEs)/length_loader
 
 def test_from_training(args,dataloader, model, log):
     stages = args.stages
@@ -154,6 +170,7 @@ def test_from_training(args,dataloader, model, log):
             mask_names=['allw','allwo','occw','occwo','noccw','noccwo'] # w: with rel_threshold, wo: without rel_threshold
     else:
         mask_names=['allw','allwo','occw','occwo','noccw','noccwo'] # w: with rel_threshold, wo: without rel_threshold
+    
     length_loader = len(dataloader)
     
     for x in range(stages):
@@ -174,7 +191,7 @@ def test_from_training(args,dataloader, model, log):
     count = 0
     for batch_idx, (imgL, imgR, disp_L,disp_L_occ_noc,obj_map_crop_img,left_path,right_path) in enumerate(dataloader):
         count +=1
-        
+
         #from matplotlib import pyplot as plt   
         imgL = imgL.float().cuda()
         imgR = imgR.float().cuda()
@@ -213,8 +230,12 @@ def test_from_training(args,dataloader, model, log):
                 outputs = model(imgL, imgR)
                 for x in range(stages):
                     if len(disp_L[mask]) == 0:
-                        EPES[x].update(0)
+                        EPES_summary[mask_names[i]][x].update(0)
                         Outliers_rate[x]=0
+                        EPES_summary[mask_names[i]][x].update(0)
+                        outliers_summary1[mask_names[i]][x].update( 0,args.test_bsize)
+                        outliers_summary2[mask_names[i]][x].update( 0,args.test_bsize)
+                        outliers_summary3[mask_names[i]][x].update( 0,args.test_bsize)
                         continue
                     output = torch.squeeze(outputs[x], 1)
                     EPES_summary[mask_names[i]][x].update((output[mask] - disp_L[mask]).abs().mean(),args.test_bsize)
@@ -288,3 +309,5 @@ def test_from_training(args,dataloader, model, log):
         #############
 
     return return_avg_losses,return_avg_EPEs,mask_names,return_test_sum_stages_losses,return_outliers_sumary1,return_outliers_sumary2,return_outliers_sumary3 #return_outliers_sumary
+    
+

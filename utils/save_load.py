@@ -8,19 +8,24 @@ from qtorch import FixedPoint, FloatingPoint
 from qtorch.auto_low import sequential_lower, lower
 from .FinalQuant import *
 
-def save_best_lossess(args,return_avg_losses,return_sum_stages_losses,minLoss,epoch,savefilename,model,optimizer,scheduler,best_checkpoints,check_train_overfit) :
+def save_best_lossess(args,return_avg_losses,return_sum_stages_losses,return_avg_epes,return_sum_stages_epes,minLoss,epoch,savefilename,model,optimizer,scheduler,best_checkpoints,check_train_overfit) :
     if return_sum_stages_losses < minLoss['sum_losses_stages']:
         minLoss['loss0'] = return_avg_losses[0]
+        minLoss['epe0'] = return_avg_epes[0]
         if args.stages >=2:
             minLoss['loss1'] = return_avg_losses[1]
+            minLoss['epe1'] = return_avg_epes[1]
         if args.stages >=3:
             minLoss['loss2'] = return_avg_losses[2]
+            minLoss['epe2'] = return_avg_epes[2]
         if args.stages ==4:
-            minLoss['loss3'] = return_avg_losses[3]    
+            minLoss['loss3'] = return_avg_losses[3]
+            minLoss['epe3'] = return_avg_epes[3]    
         minLoss['checkpointPath'] = savefilename
         minLoss['epoch'] = epoch
         minLoss['sum_losses_stages'] = return_sum_stages_losses
-        best_checkpoints.update(args, model,return_avg_losses,epoch,optimizer,scheduler,minLoss,best_checkpoints)
+        minLoss['sum_losses_stages'] = return_sum_stages_epes
+        best_checkpoints.update(args, model,return_avg_losses,return_avg_epes,epoch,optimizer,scheduler,minLoss,best_checkpoints)
         #check_train_overfit.reset()
     #if return_sum_stages_losses > minLoss['sum_losses_stages']:
     #    check_train_overfit.update(args, epoch)
@@ -38,10 +43,11 @@ def reach_overfit_or_steadystate(args, prev_sum_stages_losses, return_sum_stages
     else:
         check_train_steadystate.reset()
 
-def save_chckpoint(args, model,return_avg_losses,epoch,optimizer,scheduler,minLoss,savefilename,best_checkpoints):
+def save_chckpoint(args, model,return_avg_losses,return_avg_epes,epoch,optimizer,scheduler,minLoss,savefilename,best_checkpoints):
     torch.save({
         'state_dict': model.state_dict(),
         'avg_train_loss_stage': return_avg_losses,
+        'avg_train_epe_stage': return_avg_epes,
         'epoch': epoch,
         'optimizer_state_dict': optimizer.state_dict(),
         'sheduler' : scheduler.state_dict(),
@@ -56,6 +62,10 @@ def load_checkpoint(checkpoint_file,model,optimizer,scheduler):
     other_returned_values=[]
     model.load_state_dict(checkpoint['state_dict'])
     avg_train_loss_stage = checkpoint['avg_train_loss_stage']
+    if 'avg_train_epe_stage' in checkpoint.keys():
+        avg_train_epe_stage = checkpoint['avg_train_epe_stage']
+    else:
+        avg_train_epe_stage = None
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     scheduler.load_state_dict(checkpoint['sheduler'])
     epoch_start = checkpoint['epoch']+1
@@ -64,7 +74,7 @@ def load_checkpoint(checkpoint_file,model,optimizer,scheduler):
     saved_args=checkpoint['saved_args']
     if 'best_checkpoints' in checkpoint.keys():
         other_returned_values.append(checkpoint['best_checkpoints'])
-    return model, avg_train_loss_stage, optimizer, scheduler, epoch_start, current_lr,minLoss,saved_args,other_returned_values
+    return model, avg_train_loss_stage, avg_train_epe_stage ,optimizer, scheduler, epoch_start, current_lr,minLoss,saved_args,other_returned_values
     
 
 def load_quantized_model(args,model):
@@ -79,7 +89,7 @@ def load_quantized_model(args,model):
         model.load_state_dict(quant_model_dict)
         return model, float_model_dict
 
-def save_losses(mask_names,optimizer,path_file_losses, epoch,stages,losses_All_Stages,test_train_losses,test_train_EPEs,losses_sum_All_Stages,
+def save_losses(mask_names,optimizer,path_file_losses, epoch,stages,losses_All_Stages,epes_All_Stages,test_train_losses,test_train_EPEs,losses_sum_All_Stages,epes_sum_All_Stages,
     test_train_sum_stages_losses,test_train_outliers_sumary1,test_train_outliers_sumary2,test_train_outliers_sumary3,epoch_train_end_time,epoch_train_start_time,epoch_test_end_time,epoch_test_start_time,scheduler):
     with open(path_file_losses, 'a') as f:
         f.write("%d:" % (epoch))
@@ -87,6 +97,7 @@ def save_losses(mask_names,optimizer,path_file_losses, epoch,stages,losses_All_S
             for x in range(stages):
                 if i ==0:
                     f.write("{0:.3f}:".format(losses_All_Stages[epoch][x]))
+                    f.write("{0:.3f}:".format(epes_All_Stages[epoch][x]))
                 if i ==1:
                     f.write("{0:.3f}:".format(test_train_losses[epoch][0][x]))
                 if i ==2:
@@ -99,7 +110,8 @@ def save_losses(mask_names,optimizer,path_file_losses, epoch,stages,losses_All_S
                         f.write("{0:.3f}:".format(test_train_outliers_sumary2[epoch][j][x]))## return only the D1-allw
                         f.write("{0:.3f}:".format(test_train_outliers_sumary3[epoch][j][x]))## return only the D1-allw
         
-        f.write("{0:.3f}:".format(losses_sum_All_Stages[epoch]))        
+        f.write("{0:.3f}:".format(losses_sum_All_Stages[epoch]))
+        f.write("{0:.3f}:".format(epes_sum_All_Stages[epoch]))        
         f.write("{0:.3f}:".format(test_train_sum_stages_losses[epoch][0]))
         f.write("{0:.3f}:".format(epoch_train_end_time-epoch_train_start_time))
         f.write("{0:.3f}:".format(epoch_test_end_time-epoch_test_start_time))
@@ -210,12 +222,12 @@ class save_best_checkpoints(object):
         self.max_checkpoints=max_checkpoints # threshold
         self.counter=0
 
-    def update(self, args, model,return_avg_losses,epoch,optimizer,scheduler,minLoss,best_checkpoints):
+    def update(self, args, model,return_avg_losses,return_avg_epes,epoch,optimizer,scheduler,minLoss,best_checkpoints):
         if self.counter < self.max_checkpoints:
             sum_losses_all_stages = round(minLoss['sum_losses_stages'],5)
             checkpoint_name = "checkpoint-epoch_"+ str(minLoss['epoch'])+"-sumlosses_"+str(sum_losses_all_stages)+'.pth'
             self.best_checks.append((minLoss,checkpoint_name,sum_losses_all_stages))
-            save_chckpoint(args, model,return_avg_losses,epoch,optimizer,scheduler,minLoss,self.best_checkpoints_path+"/"+checkpoint_name,best_checkpoints)
+            save_chckpoint(args, model,return_avg_losses,return_avg_epes,epoch,optimizer,scheduler,minLoss,self.best_checkpoints_path+"/"+checkpoint_name,best_checkpoints)
             self.counter =self.counter + 1
         else:
             self.best_checks.sort(key=lambda index: index[2])
@@ -225,7 +237,7 @@ class save_best_checkpoints(object):
                 os.remove(os.path.join(self.best_checkpoints_path, remove_check_point))
             self.best_checks = self.best_checks[:-1]
             self.counter =self.counter - 1
-            self.update(args, model,return_avg_losses,epoch,optimizer,scheduler,minLoss,best_checkpoints)
+            self.update(args, model,return_avg_losses,return_avg_epes,epoch,optimizer,scheduler,minLoss,best_checkpoints)
 
     def get_best_checkpoint(self):
         self.best_checks.sort(key=lambda index: index[2])

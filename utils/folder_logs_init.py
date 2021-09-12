@@ -115,47 +115,47 @@ def inialize_log_file(args):
     thr_list = [1,2,3]
     if args.stages ==1 and args.mode != 'test':
         with open(path_file_losses, 'a+') as f:
-            f.write("epoch:Tr_loss0:Te_loss0:Te_EPE0:")
+            f.write("epoch:Tr_loss0:Tr_epe0:Te_loss0:Te_EPE0:")
             for x in range(args.stages):
                 for i in range(len(mask_names)):
                     for t in range(len(thr_list)):
                         f.write(mask_names[i])
                         f.write("_thr_%d" % (thr_list[t]))
                         f.write("_st_%d:" % (x))
-            f.write("Tr_sum_losses:Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
+            f.write("Tr_sum_losses:Tr_sum_epes:Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
             f.close()
     elif args.stages ==2 and args.mode != 'test':
         with open(path_file_losses, 'a+') as f:
-            f.write("epoch:Tr_loss0:Tr_loss1:Te_loss0:Te_loss1:Te_EPE0:Te_EPE1:")
+            f.write("epoch:Tr_loss0:Tr_epe0:Tr_loss1:Tr_epe1:Te_loss0:Te_loss1:Te_EPE0:Te_EPE1:")
             for x in range(args.stages):
                 for i in range(len(mask_names)):
                     for t in range(len(thr_list)):
                         f.write(mask_names[i])
                         f.write("_thr_%d" % (thr_list[t]))
                         f.write("_st_%d:" % (x))
-            f.write("Tr_sum_losses:Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
+            f.write("Tr_sum_losses:Tr_sum_epes:Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
             f.close()
     elif args.stages ==3 and args.mode != 'test':
         with open(path_file_losses, 'a+') as f:
-            f.write("epoch:Tr_loss0:Tr_loss1:Tr_loss2:Te_loss0:Te_loss1:Te_loss2:Te_EPE0:Te_EPE1:Te_EPE2:")
+            f.write("epoch:Tr_loss0:Tr_epe0:Tr_loss1:Tr_epe1:Tr_loss2:Tr_epe2:Te_loss0:Te_loss1:Te_loss2:Te_EPE0:Te_EPE1:Te_EPE2:")
             for x in range(args.stages):
                 for i in range(len(mask_names)):
                     for t in range(len(thr_list)):
                         f.write(mask_names[i])
                         f.write("_thr_%d" % (thr_list[t]))
                         f.write("_st_%d:" % (x))
-            f.write("Tr_sum_losses:Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
+            f.write("Tr_sum_losses:Tr_sum_epes:Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
             f.close()
     elif args.stages ==4 and args.mode != 'test':
         with open(path_file_losses, 'a+') as f:
-            f.write("epoch:Tr_loss0:Tr_loss1:Tr_loss2:Tr_loss3:Te_loss0:Te_loss1:Te_loss2:Te_loss3:Te_EPE0:Te_EPE1:Te_EPE2:Te_EPE3:")
+            f.write("epoch:Tr_loss0:Tr_epe0:Tr_loss1:Tr_epe1:Tr_loss2:Tr_epe2:Tr_loss3:Tr_epe3:Te_loss0:Te_loss1:Te_loss2:Te_loss3:Te_EPE0:Te_EPE1:Te_EPE2:Te_EPE3:")
             for x in range(args.stages):
                 for i in range(len(mask_names)):
                     for t in range(len(thr_list)):
                         f.write(mask_names[i])
                         f.write("_thr_%d" % (thr_list[t]))
                         f.write("_st_%d:" % (x))
-            f.write("Tr_sum_losses:Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
+            f.write("Tr_sum_losses:Tr_sum_epes:Te_sum_losses:Tr_time(s):Te_time(s):LR\n")
             f.close()
     if args.mode != 'test':
         with open(path_file_GL, 'a+') as f_GL:
@@ -201,7 +201,11 @@ def inialize_log_file(args):
             else:
                 log.info('========= Model ' + args.model + ' was loaded with number of subspaces is '+ str(len(args.fact_kernels)-1) + ' + last Conv1D, with no Batch Normalized used for whole the model')
                 log.info("The used kernels are: "+ str(args.fact_kernels))
-
+        '''
+        log.info("novel Stereonet arguments are: ")
+        log.info("initial_ch: "+ str(args.initial_ch) + ", " +  "initial_scale_factor: "+ str(args.initial_scale_factor) + ", " + "disp_offset: "+ str(args.disp_offset) )
+        log.info("sub_pixel_acc: "+ str(args.sub_pixel_acc) + ", " +  "patch_index: "+ str(args.patch_index) + ", " + "chout_costfiltring: "+ str(args.chout_costfiltring) )
+        '''
     for key, value in sorted(vars(args).items()):
         log.info(str(key) + ':' + str(value))
     return timestr1, path_file_losses, path_file_GL,log,root_path,checkpoints_path,logs_path,test_results_path,valid_file_results

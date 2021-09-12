@@ -3,6 +3,21 @@ import torch.nn.functional as F
 import cv2 as cv
 import torch.nn as nn
 
+def epe(pred, GT, args):
+    # mask = (GT < args.maxdisp) & (GT >= 0)
+    if args.dataset == "kitti":
+        mask = (GT < args.maxdisp) & (GT > 0)
+    else:
+        GT = -1 * GT
+        mask = (GT < args.maxdisp) & (GT > 0)
+        #mask = GT < args.maxdisp
+    mask.detach_()
+    #print(mask.size(), GT.size(), pred.size())
+    #count = len(torch.nonzero(mask,as_tuple=False))
+    #if count == 0:
+    #    count = 1
+    return (pred[mask] - GT[mask]).abs().mean()
+    
 def GERF_loss(pred, GT, args):
     # mask = (GT < args.maxdisp) & (GT >= 0)
     if args.dataset == "kitti":
@@ -13,14 +28,14 @@ def GERF_loss(pred, GT, args):
         #mask = GT < args.maxdisp
     mask.detach_()
     #print(mask.size(), GT.size(), pred.size())
-    count = len(torch.nonzero(mask))
+    count = len(torch.nonzero(mask,as_tuple=False))
     if count == 0:
         count = 1
     return torch.sum(torch.sqrt(torch.pow(pred[mask] - GT[mask], 2) + 4) /2 - 1) / count
 
 def GERF_loss_mask(pred, GT,mask, args):
     mask.detach_()
-    count = len(torch.nonzero(mask))
+    count = len(torch.nonzero(mask,as_tuple=False))
     if count == 0:
         count = 1
     return torch.sum(torch.sqrt(torch.pow(pred[mask] - GT[mask], 2) + 4) /2 - 1) / count
@@ -60,6 +75,67 @@ def weights_init(m):
             torch.nn.init.constant_(m.weight, 0.2)
         if m.bias is not None:
             m.bias.data.zero_()
+
+############
+def get_masks_GT_scales(args,outputs_size,disp_L,disp_L_occ_noc,obj_map_crop_img):
+    initial_scale_factor = args.initial_scale_factor
+    stages = args.stages
+    
+    disp_L_scales=[]
+    disp_L_noc_scales=[]
+    disp_L_occ_scales=[]
+    obj_map_crop_img_scales=[]
+    mask_all=[]
+    mask_occ=[]
+    mask_noc=[]
+    mask_bg=[]
+    mask_fg=[]
+    
+    if args.dataset == "kitti":
+        disp_L_noc = disp_L_occ_noc.float().cuda() #
+        obj_map_crop_img = obj_map_crop_img.float().cuda()
+        disp_L_noc = disp_L_noc.unsqueeze(1)
+        obj_map_crop_img = obj_map_crop_img.unsqueeze(1)
+    else: # FlyingThings3D
+        disp_L_occ = disp_L_occ_noc.float().cuda() #
+        disp_L_occ = disp_L_occ.unsqueeze(1)
+        
+    disp_L = disp_L.unsqueeze(1)
+    
+    ############
+    disp_L_h,disp_L_w = disp_L.size(-2),disp_L.size(-1)
+    if args.dataset == "kitti":
+        for s in range(stages):
+            out_h, out_w = outputs_size[s][-2], outputs_size[s][-1]
+            disp_L_scales.append(F.interpolate(disp_L,size=(out_h, out_w),mode='bilinear', align_corners=True).squeeze(1) * out_w/disp_L_w )
+            disp_L_noc_scales.append(F.interpolate(disp_L_noc,size=(out_h, out_w),mode='bilinear', align_corners=True).squeeze(1) * out_w/disp_L_w )
+            obj_map_crop_img_scales.append(F.interpolate(obj_map_crop_img,size=(out_h, out_w),mode='bilinear', align_corners=True).squeeze(1) * out_w/disp_L_w )
+            scale = (initial_scale_factor * (2 ** (2 -s)))
+            mask_all.append((disp_L_scales[s] < args.maxdisp//scale) & (disp_L_scales[s] > 0))
+            mask_occ.append((abs(disp_L_scales[s] - disp_L_noc_scales[s]) > 0) *  mask_all[s])
+            mask_noc.append((disp_L_noc_scales[s] > 0) * mask_all[s])
+            if args.datatype == '2015':
+                mask_bg.append((obj_map_crop_img_scales[s] == 0) * mask_all[s])
+                mask_fg.append((obj_map_crop_img_scales[s] > 0) * mask_all[s])
+        if args.datatype == '2015':
+            masks_list=[mask_all,mask_all,mask_bg,mask_bg,mask_fg,mask_fg, mask_occ,mask_occ,mask_noc,mask_noc]
+        else:
+            masks_list=[mask_all,mask_all, mask_occ,mask_occ,mask_noc,mask_noc]
+            
+    else: # FlyingThings3D
+        for s in range(stages):
+            out_h, out_w = outputs_size[s][-2], outputs_size[s][-1]
+            disp_L_scales.append(F.interpolate(disp_L,size=(out_h, out_w),mode='bilinear', align_corners=True).squeeze(1) * out_w/disp_L_w )
+            disp_L_occ_scales.append(F.interpolate(disp_L_occ,size=(out_h, out_w),mode='bilinear', align_corners=True).squeeze(1) * out_w/disp_L_w )
+            
+            scale = (initial_scale_factor * (2 ** (2 -s))) 
+            mask_all.append((disp_L_scales[s] < args.maxdisp//scale) & (disp_L_scales[s] > 0))
+            mask_occ.append((disp_L_occ_scales[s] > 0))
+            mask_noc.append((disp_L_occ_scales[s] == 0))
+        masks_list=[mask_all,mask_all, mask_occ,mask_occ,mask_noc,mask_noc]
+
+    return masks_list,disp_L_scales
+########
 
 class AverageMeter(object):
     """Compute and stores the average and current value"""
