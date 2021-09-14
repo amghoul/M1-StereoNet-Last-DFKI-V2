@@ -24,7 +24,7 @@ def save_best_lossess(args,return_avg_losses,return_sum_stages_losses,return_avg
         minLoss['checkpointPath'] = savefilename
         minLoss['epoch'] = epoch
         minLoss['sum_losses_stages'] = return_sum_stages_losses
-        minLoss['sum_losses_stages'] = return_sum_stages_epes
+        minLoss['sum_epes_stages'] = return_sum_stages_epes
         best_checkpoints.update(args, model,return_avg_losses,return_avg_epes,epoch,optimizer,scheduler,minLoss,best_checkpoints)
         #check_train_overfit.reset()
     #if return_sum_stages_losses > minLoss['sum_losses_stages']:

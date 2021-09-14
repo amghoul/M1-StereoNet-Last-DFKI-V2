@@ -326,7 +326,7 @@ def main(args):
                     best_model,no_improvement_epochs,best_model_dict,ealryStoppedPaths,best_error,earlyStoppedEpochs = stop_early(
                         args,model,optimizer,scheduler,log, avgValErr_for_split_epochs[-1],best_error,timestr,epoch,return_avg_losses, 
                         return_sum_stages_losses,minLoss, earlyStoppedEpochs,n_stop_epochs,no_improvement_epochs,best_model,ealryStoppedPaths,
-                        best_model_dict,checkpoints_path,best_checkpoints)
+                        best_model_dict,checkpoints_path,best_checkpoints,return_avg_epes)
             
         if args.with_quant ==1:
             model_save_path = checkpoints_path + '/' + 'checkpoint_withQuantize_finetune_kitti'+args.datatype+'-'+timestr+'-epoch-'+str(epoch)+'-loss'+str(args.stages-1)+'-'+str(round(return_avg_losses[args.stages-1],3))+'-lossesSum-'+str(round(return_sum_stages_losses,3))+'.pth'
