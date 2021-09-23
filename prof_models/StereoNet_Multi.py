@@ -301,23 +301,18 @@ class StereoNetProf(nn.Module):
         
         img_pyramid_list.reverse() # [1,3,135,240] [1,3,270,480] [1,3,540,960]
         pred_pyramid_list= [pred] # [1,68,120] unrefined
-        for i in range(self.r):
-            pred_pyramid_list.append(self.edge_aware_refinements[i](
-                    pred_pyramid_list[i], img_pyramid_list[i]))
-
+        pred_pyramid_list.append(self.edge_aware_refinements[0](pred_pyramid_list[0], img_pyramid_list[0]))
+        pred_pyramid_list.append(self.edge_aware_refinements[1](pred_pyramid_list[1], img_pyramid_list[1]))
+        pred_pyramid_list.append(self.edge_aware_refinements[2](pred_pyramid_list[2], img_pyramid_list[2]))    
         length_all = len(pred_pyramid_list)
-        
-        for i in range(length_all): # my change from 1 to 4
-            pred_pyramid_list[i] = pred_pyramid_list[i]* (
-                left.size()[-1] / pred_pyramid_list[i].size()[-1])
-            
-            pred_pyramid_list[i] = torch.squeeze(
-            F.interpolate(
-                torch.unsqueeze(pred_pyramid_list[i], dim=1),
-                size=left.size()[-2:],
-                mode='bilinear',
-                align_corners=False),
-            dim=1)    
+        pred_pyramid_list[0] = pred_pyramid_list[0]* (left.size()[-1] / pred_pyramid_list[0].size()[-1])
+        pred_pyramid_list[0] = torch.squeeze( F.interpolate(torch.unsqueeze(pred_pyramid_list[0], dim=1), size=left.size()[-2:], mode='bilinear', align_corners=False),dim=1)
+        pred_pyramid_list[1] = pred_pyramid_list[1]* (left.size()[-1] / pred_pyramid_list[1].size()[-1])
+        pred_pyramid_list[1] = torch.squeeze( F.interpolate(torch.unsqueeze(pred_pyramid_list[1], dim=1), size=left.size()[-2:], mode='bilinear', align_corners=False),dim=1)
+        pred_pyramid_list[2] = pred_pyramid_list[2]* (left.size()[-1] / pred_pyramid_list[2].size()[-1])
+        pred_pyramid_list[2] = torch.squeeze( F.interpolate(torch.unsqueeze(pred_pyramid_list[2], dim=1), size=left.size()[-2:], mode='bilinear', align_corners=False),dim=1)
+        pred_pyramid_list[3] = pred_pyramid_list[3]* (left.size()[-1] / pred_pyramid_list[3].size()[-1])
+        pred_pyramid_list[3] = torch.squeeze( F.interpolate(torch.unsqueeze(pred_pyramid_list[3], dim=1), size=left.size()[-2:], mode='bilinear', align_corners=False),dim=1)
         return pred_pyramid_list
 
 ############################Multi ok to change
@@ -467,6 +462,16 @@ def profile_network(model, input_channels, height, width):
     print("+++++++++++++++++++++++++++++++++++++++++++")
     print("+++ INFO : PRINTING PARAMETER PROFILING +++")
     print("+++++++++++++++++++++++++++++++++++++++++++")
+    ts_params = Texttable()
+    t_rows_params = [[]]
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            t_rows_params.append([name, param.data.numel()])
+    ts_params.add_rows(t_rows_params)
+    ts_params.set_chars(["","","",""])
+    ts_params.header(['Name', 'Total Number'])
+    print(ts_params.draw())
+    #######
     t = Texttable()
     t_rows = [[]]
     for name, param in model.named_parameters():
@@ -572,7 +577,7 @@ if __name__ == '__main__':
     
     import torch
     from torchsummary import summary
-    from ptflops import get_model_complexity_info
+    from ptflops.flops_counter import get_model_complexity_info
     import torchprof
     import hiddenlayer as hl
     from texttable import Texttable
@@ -586,6 +591,7 @@ if __name__ == '__main__':
     #stages=[1,2,3,4]
     stages=[4]
     prof_list=["memlab"]
+    #prof_list=["profilingAll"]
     #prof_list=["noProfiling","timeOnly","logMem","profilingAll","memlab"]
 
     device = torch.device('cuda')

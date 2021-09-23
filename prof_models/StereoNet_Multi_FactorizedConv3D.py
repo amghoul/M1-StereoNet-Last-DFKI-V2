@@ -281,7 +281,7 @@ class StereoNetProf(nn.Module):
         self.edge_aware_refinements = nn.ModuleList()
         for _ in range(self.r):
             self.edge_aware_refinements.append(EdgeAwareRefinement(4,model_bn))
-    @profile
+    #@profile
     def forward(self, left, right):
         disp = (self.maxdisp + 1) // pow(2, self.k)
         refimg_feature = self.feature_extraction(left)
@@ -299,17 +299,28 @@ class StereoNetProf(nn.Module):
         pred =soft_argmin(cost)
         pred = disparityregression(disp)(pred)
         img_pyramid_list = []
-        for i in range(self.r):
-            img_pyramid_list.append( F.interpolate(left,scale_factor=1/pow(2,i), mode='bilinear', align_corners=False))
+        
+        img_pyramid_list.append( F.interpolate(left,scale_factor=1/pow(2,0), mode='bilinear', align_corners=False))
+        img_pyramid_list.append( F.interpolate(left,scale_factor=1/pow(2,1), mode='bilinear', align_corners=False))
+        img_pyramid_list.append( F.interpolate(left,scale_factor=1/pow(2,2), mode='bilinear', align_corners=False))
         img_pyramid_list.reverse()
+
         pred_pyramid_list= [pred]
-        for i in range(self.r):
-            pred_pyramid_list.append(self.edge_aware_refinements[i](pred_pyramid_list[i], img_pyramid_list[i]))
+        pred_pyramid_list[0] = pred_pyramid_list[0] * 8
+        pred_pyramid_list[0] = torch.squeeze(F.interpolate(torch.unsqueeze(pred_pyramid_list[0], dim=1),size=left.size()[-2:], mode='bilinear', align_corners=False),dim=1)
+
+        pred_pyramid_list.append(self.edge_aware_refinements[0](pred_pyramid_list[0], img_pyramid_list[0])) #ref0
+        pred_pyramid_list[1] = pred_pyramid_list[1] * 8
+        pred_pyramid_list[1] = torch.squeeze(F.interpolate(torch.unsqueeze(pred_pyramid_list[1], dim=1),size=left.size()[-2:], mode='bilinear', align_corners=False),dim=1)
+
+        pred_pyramid_list.append(self.edge_aware_refinements[1](pred_pyramid_list[1], img_pyramid_list[1]))
+        pred_pyramid_list[2] = pred_pyramid_list[2] * 8
+        pred_pyramid_list[2] = torch.squeeze(F.interpolate(torch.unsqueeze(pred_pyramid_list[2], dim=1),size=left.size()[-2:], mode='bilinear', align_corners=False),dim=1)
+
+        pred_pyramid_list.append(self.edge_aware_refinements[2](pred_pyramid_list[2], img_pyramid_list[2]))
+        pred_pyramid_list[3] = pred_pyramid_list[3] * 8
+        pred_pyramid_list[3] = torch.squeeze(F.interpolate(torch.unsqueeze(pred_pyramid_list[3], dim=1),size=left.size()[-2:], mode='bilinear', align_corners=False),dim=1)
         length_all = len(pred_pyramid_list)
-        for i in range(length_all):
-            pred_pyramid_list[i] = pred_pyramid_list[i] * 8
-            pred_pyramid_list[i] = torch.squeeze(
-            F.interpolate(torch.unsqueeze(pred_pyramid_list[i], dim=1),size=left.size()[-2:], mode='bilinear', align_corners=False),dim=1)
         return pred_pyramid_list
 
 ############StereoNet for timinng
@@ -464,6 +475,16 @@ def profile_network(model, input_channels, height, width):
     print("+++++++++++++++++++++++++++++++++++++++++++")
     print("+++ INFO : PRINTING PARAMETER PROFILING +++")
     print("+++++++++++++++++++++++++++++++++++++++++++")
+    ts_params = Texttable()
+    t_rows_params = [[]]
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            t_rows_params.append([name, param.data.numel()])
+    ts_params.add_rows(t_rows_params)
+    ts_params.set_chars(["","","",""])
+    ts_params.header(['Name', 'Total Number'])
+    print(ts_params.draw())
+    #######
     t = Texttable()
     t_rows = [[]]
     for name, param in model.named_parameters():
@@ -590,7 +611,7 @@ if __name__ == '__main__':
     #CUDA_VISIBLE_DEVICES=0 python
     import torch
     from torchsummary import summary
-    from ptflops import get_model_complexity_info
+    from ptflops.flops_counter import get_model_complexity_info
     import torchprof
     import hiddenlayer as hl
     from texttable import Texttable
@@ -602,19 +623,22 @@ if __name__ == '__main__':
     BN_1D=1
     BN_2D=0
     is_filter1_differ=0
-    filter1_kernels=[[3,3,1], [1,1,3],[1,1,3]]
-    fact_kernels=[[3,3,1], [1,1,3],[1,1,3]]
+    filter1_kernels=[[3, 3, 1], [1, 3, 3], [3, 1, 1]] #[[3,3,1], [1,1,3],[1,1,3]]
+    
+    #fact_kernels=[[3, 3, 1], [1, 3, 3], [3, 1, 1]] # ab 6 = "331 133 311"
+    #fact_kernels=[[3,3,1],[3,1,1],[3,1,1]] # ab11 = "331 311 311"
+    fact_kernels=[[3,3,1], [1,1,3],[1,1,3]] # ab13 = "331 113 113"
     
     #stages_list=[1,2,3,4]
     stages_list=[4]
-    prof_list=["memlab"]
-    #prof_list=["noProfiling","timeOnly","logMem","profilingAll","memlab"]
+    #prof_list=["memlab"]
+    prof_list=["noProfiling","timeOnly","logMem","profilingAll"]
     device = torch.device('cuda')
     dummy_input = torch.randn(1, 3,540, 960,dtype=torch.float).to(device)
     
     print("The current used GPU is: ", torch.cuda.get_device_name(torch.cuda.current_device()))
     B,C,H,W = dummy_input.size()
-    model_name = "cd_fact3d"
+    model_name = "cd_fact3d_ab13"
 
     for stages in stages_list:
         modeltype = 'dmodel_'+model_name+"_stages_"+str(stages)
