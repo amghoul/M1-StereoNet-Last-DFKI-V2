@@ -1,12 +1,12 @@
 <!-- preview: ctrl+k v multi-cursor: shift+alt+i Head -->
-# GazaNet Model
+# Single-Scale Disparity Estimation (SSDE) Model
 
 ## **Contents**
-- [GazaNet Model](#gazanet-model)
+- [Single-Scale Disparity Estimation (SSDE) Model](#single-scale-disparity-estimation-ssde-model)
   - [**Contents**](#contents)
   - [Model Structure](#model-structure)
     - [Original Model](#original-model)
-    - [GazaNet Model](#gazanet-model-1)
+    - [SSDE Model](#ssde-model)
   - [Folder Structure](#folder-structure)
   - [Requirements to run the code](#requirements-to-run-the-code)
   - [Dataset Path \& Structure](#dataset-path--structure)
@@ -22,7 +22,7 @@
 ## <a name= model>Model Structure</a>
 ### <a name= org>Original Model</a>
 ![Original model](Readme_images/orginalmodel.PNG)
-### <a name= gazanet>GazaNet Model</a>
+### <a name= SSDE>SSDE Model</a>
 ![SSDE model (Our first model)](Readme_images/SSDE-details.png)
 
 ---
@@ -46,11 +46,11 @@
  ┃ ┣ 📜plot.py
  ┃ ┣ 📜spatioTemporalConv_General.py --> Actual implementation of factorizing cost filtering layer
  ┃ ┣ 📜StereoNet_Multi.py --> for Original StereoNet model
- ┃ ┣ 📜StereoNet_Multi_FactorizedConv3D.py --> for Our model (GazaNet)
+ ┃ ┣ 📜StereoNet_Multi_FactorizedConv3D.py --> for Our model (SSDE)
  ┃ ┗ 📜StereoNet_Multi_SepConv.py
  ┣ 📂pretrainedModels --> contains pretrained models on FT3d
  ┣ 📂Readme_images
- ┃ ┣ 📜gazanet.PNG
+ ┃ ┣ 📜SSDE.PNG
  ┃ ┗ 📜orginalmodel.PNG
  ┣ 📂results --> contains results of running the code
  ┣ 📂utils
@@ -148,7 +148,7 @@
         - datatype: {2012, 2015} to select kitti version 2012 or 2015
         - flip_vertical: {0,1} This for KITII dataset to enable flipping the image up-down for 1 or no flipping
     - stages: --> {1,2,3,4} Number of stages
-    - model: --> {org, cf_fact3d, cf_sepconv}  to select the model to run it. org: original model, cf_fact3d: GazaNet model (ourmodel), cf_sepconv: eperable conolution model (not used)
+    - model: --> {org, cf_fact3d, cf_sepconv}  to select the model to run it. org: original model, cf_fact3d: SSDE model (ourmodel), cf_sepconv: eperable conolution model (not used)
     - mode: {train,finetune,test} To select mode of running
     - epochs: Number of epochs
     - lr: Learning rate vfalue {0.001}
@@ -169,7 +169,7 @@
     - ###for resuming
         - resume: {0,1} --> 0: no resuming, 1: enable resuming
         - resumeFile: {None, /kitti_model_cf_fact3d_3stages/checkpoints/- cf_fact3d_fin_kitti-2015-2020_12_19-16_03_29-epoch-2-loss2-10.031-lossesSum-31.297.pth} --> The path of the resume file if enable resume
-    - ####for GazaNet model=cf_fact3d (our model)
+    - ####for SSDE model=cf_fact3d (our model)
         - model_bn:{0,1} --> for enabling Batch Normalized (BN) layers in whole the model or not. 1: enable BN according to the BN_1D_last or (BN_1D and BN_2D) values. 0: disable BN regardless of BN_1D_last,BN_1D and BN_2D values.
         -BN_1D_last: {0,1} --> enforcing BN for the last conv1D in factorized conv3d layers regardless of BN_1D and BN_2D values. 0: use BN_1D and BN_2D values for BN
         - BN_1D: {0,1} --> 0: don't use batch normalized with Conv1D layer in factorizing, 1: use batch normalized with Conv1D layer in factorizing
