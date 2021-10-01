@@ -2,21 +2,20 @@
 # GazaNet Model
 
 ## **Contents**
-- [Model Structure](#model)
-    - [Original Model](#org)
-    - [GazaNet model](#gazanet)
-- [Folder Structure](#FolderStructure)
-- [Dataset Path & Structure](#dataset)
-    - [FlyingThings3D Dataset](#FT3D)
-    - [KITTI 2015 Dataset](#kitti2015)
-    - [KITTI 2012 Dataset](#kitti2015)
-- [Requirements to run the code](#reqs)
-- [Main parameters to run the code](#args)
-- [How to run the code](#run)
-    - [Training the model](#train)
-    - [Finetuning the model](#finetune)
-    - [Resuming the model](#resume)
-    - [Testing the model](#test)
+- [GazaNet Model](#gazanet-model)
+  - [**Contents**](#contents)
+  - [Model Structure](#model-structure)
+    - [Original Model](#original-model)
+    - [GazaNet Model](#gazanet-model-1)
+  - [Folder Structure](#folder-structure)
+  - [Requirements to run the code](#requirements-to-run-the-code)
+  - [Dataset Path \& Structure](#dataset-path--structure)
+  - [Main parameters to run the code](#main-parameters-to-run-the-code)
+  - [How to run the code](#how-to-run-the-code)
+    - [Training the model](#training-the-model)
+    - [Finetuning the model](#finetuning-the-model)
+    - [Resuming the model](#resuming-the-model)
+    - [Testing the model](#testing-the-model)
 
 ---
 
@@ -24,7 +23,7 @@
 ### <a name= org>Original Model</a>
 ![Original model](Readme_images/orginalmodel.PNG)
 ### <a name= gazanet>GazaNet Model</a>
-![GazaNet model (Our model)](Readme_images/gazanet.PNG)
+![SSDE model (Our model)](Readme_images/SSDE-details.PNG)
 
 ---
 
