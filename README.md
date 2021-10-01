@@ -29,7 +29,7 @@
 
 ## <a name= FolderStructure>Folder Structure</a>
 ```
-📦StereoNet-Last-DFKI-V2
+📦M1-SSDE
  ┣ 📂dataloader
  ┃ ┣ 📜KITTILoader.py --> myImageFolder for KITTI 2015
  ┃ ┣ 📜KITTILoader1.py --> myImageFolder for KITTI 2012
@@ -142,7 +142,7 @@
 
 ## <a name= args>Main parameters to run the code</a>
 - These paramters are the main parameters to run the code:
-    - ###Selecting the dataset
+    - ### Selecting the dataset
         - dataset: --> {sceneflow, kitti} To select the dataset
         - datapath: {/home/alghoul/myenv/FlyingThings3D,/home/alghoul/myenv/kitti2015/training,/home/alghoul/myenv/kitti2012/training} To select the root path of the datset. Note: This paremeters should match the the value of the "dataset" parameter
         - datatype: {2012, 2015} to select kitti version 2012 or 2015
@@ -158,18 +158,18 @@
     - print_freq: {30} How often epochs print the result on screen while training or finetuning
     - checkpoint_save_thr= {1} How often to save checkpoints
     - abs_thr={1,2,3} Absolute threshold to caluclate the loss
-    - ####load pretrained model
+    - #### load pretrained model
         - loadmodel: {None,/pretrainedModels/org_2Stages_finetune_kitti2015-2020_10_19-21_44_15-epoch-1908-loss1-0.- 52-lossesSum-1.17-EarlyStopping-stereonet.pth} --> Load pretrained model for either finetuning or resuming the model. We save the pretrained model in the "pretrainedModels" folder on the root
-    - ####quantization
+    - #### quantization
         - with_quant: {0,1) --> 0: no quantization, 1: quatizing the model 
         - quantWL: {16} --> the whole word length in quantization
         - quantFL: {8} --> the Float point length in quantization
         - ####for testing
     testFile: {None, /checkpoint_finetune_kitti2015-2020_12_04-21_28_07-epoch-4000-loss1-0.317-lossesSum-4.- 391.pth} --> the path of the checkpoint used if we put the value of mode = test
-    - ###for resuming
+    - ### for resuming
         - resume: {0,1} --> 0: no resuming, 1: enable resuming
         - resumeFile: {None, /kitti_model_cf_fact3d_3stages/checkpoints/- cf_fact3d_fin_kitti-2015-2020_12_19-16_03_29-epoch-2-loss2-10.031-lossesSum-31.297.pth} --> The path of the resume file if enable resume
-    - ####for SSDE model=cf_fact3d (our model)
+    - #### for SSDE model=cf_fact3d (our model)
         - model_bn:{0,1} --> for enabling Batch Normalized (BN) layers in whole the model or not. 1: enable BN according to the BN_1D_last or (BN_1D and BN_2D) values. 0: disable BN regardless of BN_1D_last,BN_1D and BN_2D values.
         -BN_1D_last: {0,1} --> enforcing BN for the last conv1D in factorized conv3d layers regardless of BN_1D and BN_2D values. 0: use BN_1D and BN_2D values for BN
         - BN_1D: {0,1} --> 0: don't use batch normalized with Conv1D layer in factorizing, 1: use batch normalized with Conv1D layer in factorizing
