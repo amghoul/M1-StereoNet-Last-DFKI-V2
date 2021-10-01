@@ -23,7 +23,7 @@
 ### <a name= org>Original Model</a>
 ![Original model](Readme_images/orginalmodel.PNG)
 ### <a name= gazanet>GazaNet Model</a>
-![SSDE model (Our model)](Readme_images/SSDE-details.PNG)
+![SSDE model (Our first model)](Readme_images/SSDE-details.png)
 
 ---
 
