@@ -12,23 +12,11 @@ from utils.FinalQuant import *
 def adjust_learning_rate(args,scheduler,optimizer, epoch,log):
     if args.with_quant ==0:
         if args.dataset == "kitti":
-            if epoch <= 200:
-                lr = 0.001
+            if epoch <= args.ch_lr_after:
+                    lr = 0.001
             else: # epoch > 200
                 if (scheduler.get_last_lr()[0]> 0.00001):
-                    if epoch % 50 == 0:
-                        scheduler.step() # will adjust learning rate
-                        lr = scheduler.get_last_lr()[0]
-                    else:
-                        lr = scheduler.get_last_lr()[0]
-                else:
-                    lr = scheduler.get_last_lr()[0]
-        else: #scenflow
-            if epoch <= 5:
-                lr = 0.001
-            else: # epoch > 200
-                if (scheduler.get_last_lr()[0]> 0.00001):
-                    if epoch % 1 == 0:
+                    if (epoch - args.ch_lr_after) % args.stepsize == 0: # 50
                         scheduler.step() # will adjust learning rate
                         if (scheduler.get_last_lr()[0]< 0.00001):
                             lr = 0.00001
@@ -38,7 +26,25 @@ def adjust_learning_rate(args,scheduler,optimizer, epoch,log):
                     else:
                         lr = scheduler.get_last_lr()[0]
                 else:
-                    lr = scheduler.get_last_lr()[0]
+                    #lr = scheduler.get_last_lr()[0]
+                    lr = 0.00001
+        else: #scenflow
+            if epoch <= args.ch_lr_after:
+                lr = 0.001
+            else: # epoch > 200
+                if (scheduler.get_last_lr()[0]> 0.00001):
+                    if (epoch - args.ch_lr_after) % args.stepsize == 0:
+                        scheduler.step() # will adjust learning rate
+                        if (scheduler.get_last_lr()[0]< 0.00001):
+                            lr = 0.00001
+                        else:
+                            lr = scheduler.get_last_lr()[0]
+                        #lr = scheduler.get_last_lr()[0]
+                    else:
+                        lr = scheduler.get_last_lr()[0]
+                else:
+                    #lr = scheduler.get_last_lr()[0]
+                    lr = 0.00001
     else: #args.with_quant ==1:
         if epoch <= 2000:
             lr = 0.01

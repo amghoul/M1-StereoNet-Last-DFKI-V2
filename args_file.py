@@ -13,6 +13,7 @@ parser.add_argument('--datatype', default='2015', help='Kitti version 2015 or 20
 parser.add_argument('--flip_vertical', type=int, default=0, help='flip vertically the KITTI dataset images. 1: flip, 0: no flipping')
 parser.add_argument('--save_path', type=str, default='results', help='the path of saving checkpoints and logs for training, fintuning and testing')
 parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
+parser.add_argument('--ch_lr_after', type=int, default=5, help='How number of epcohs to use the same value of the initial lr when we start the training ')
 parser.add_argument('--train_bsize', type=int, default=1, help='train batch size')
 parser.add_argument('--test_bsize', type=int, default=1, help='test batch size')
 parser.add_argument('--itersize', default=1, type=int, metavar='IS', help='iter size')

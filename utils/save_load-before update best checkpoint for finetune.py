@@ -8,8 +8,8 @@ from qtorch import FixedPoint, FloatingPoint
 from qtorch.auto_low import sequential_lower, lower
 from .FinalQuant import *
 
-def save_best_lossess(args,return_avg_losses,return_sum_stages_losses,return_avg_epes,return_sum_stages_epes,return_test_sum_stages_losses,minLoss,epoch,savefilename,model,optimizer,scheduler,best_checkpoints,check_train_overfit) :
-    if return_test_sum_stages_losses < minLoss['test_sum_losses_stages']:
+def save_best_lossess(args,return_avg_losses,return_sum_stages_losses,return_avg_epes,return_sum_stages_epes,minLoss,epoch,savefilename,model,optimizer,scheduler,best_checkpoints,check_train_overfit) :
+    if return_sum_stages_losses < minLoss['sum_losses_stages']:
         minLoss['loss0'] = return_avg_losses[0]
         minLoss['epe0'] = return_avg_epes[0]
         if args.stages >=2:
@@ -25,7 +25,6 @@ def save_best_lossess(args,return_avg_losses,return_sum_stages_losses,return_avg
         minLoss['epoch'] = epoch
         minLoss['sum_losses_stages'] = return_sum_stages_losses
         minLoss['sum_epes_stages'] = return_sum_stages_epes
-        minLoss['test_sum_losses_stages'] = return_test_sum_stages_losses
         best_checkpoints.update(args, model,return_avg_losses,return_avg_epes,epoch,optimizer,scheduler,minLoss,best_checkpoints)
         #check_train_overfit.reset()
     #if return_sum_stages_losses > minLoss['sum_losses_stages']:
@@ -225,7 +224,7 @@ class save_best_checkpoints(object):
 
     def update(self, args, model,return_avg_losses,return_avg_epes,epoch,optimizer,scheduler,minLoss,best_checkpoints):
         if self.counter < self.max_checkpoints:
-            sum_losses_all_stages = round(minLoss['test_sum_losses_stages'],5)
+            sum_losses_all_stages = round(minLoss['sum_losses_stages'],5)
             checkpoint_name = "checkpoint-epoch_"+ str(minLoss['epoch'])+"-sumlosses_"+str(sum_losses_all_stages)+'.pth'
             self.best_checks.append((minLoss,checkpoint_name,sum_losses_all_stages))
             save_chckpoint(args, model,return_avg_losses,return_avg_epes,epoch,optimizer,scheduler,minLoss,self.best_checkpoints_path+"/"+checkpoint_name,best_checkpoints)
